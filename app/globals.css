@@ -288,7 +288,7 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
 }
 
 .template-landing #hero {
-  height: 140vh;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,6 +298,8 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
 .template-landing .hero-title-container {
   position: relative;
   z-index: 10;
+  text-align: center;
+  width: 100%;
 }
 
 .template-landing .parallax-text {

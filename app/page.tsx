@@ -105,13 +105,6 @@ export default function LandingPage() {
             <span className="huge-type parallax-text" data-speed="-2">
               SPAY
             </span>
-            <span
-              className="huge-type outline-text parallax-text"
-              data-speed="2"
-              style={{ paddingLeft: "200px" }}
-            >
-              CONTROL
-            </span>
           </div>
         </section>
 
