@@ -1,0 +1,5 @@
+export const APP_NAME = "Spendly"
+export const DASHBOARD_SIDEBAR_TITLE = "Control Center"
+export const ORG_LABEL = "ORGANIZATION"
+export const TEMP_LOCAL_TEST_USER_ID = "temp-local-test-user"
+export const TEMP_LOCAL_TEST_EMAIL = "test@spendly.local"

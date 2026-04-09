@@ -3,11 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { BarChart3, CalendarClock, CreditCard, LayoutDashboard, LogOut, Menu, Settings } from "lucide-react"
+import { BarChart3, CalendarClock, CreditCard, LayoutDashboard, LogOut, Menu, PlugZap, Settings } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { APP_NAME, DASHBOARD_SIDEBAR_TITLE, ORG_LABEL } from "@/lib/utils/constants"
 
 type DashboardShellProps = {
   children: React.ReactNode
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/dashboard/calendar", label: "Renewal Calendar", icon: CalendarClock },
+  { href: "/dashboard/connect", label: "Connect Gmail", icon: PlugZap },
   { href: "/dashboard/insights", label: "Insights", icon: BarChart3 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
@@ -66,8 +68,8 @@ export function DashboardShell({ children, orgName, userName, userEmail }: Dashb
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-6 md:px-6">
         <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-64 rounded-3xl border border-border/70 bg-card p-4 shadow-sm md:block">
           <div className="mb-6 border-b border-border/70 pb-4">
-            <p className="text-xs font-mono text-muted-foreground">SPENDLY</p>
-            <p className="mt-2 font-serif text-xl">Control Center</p>
+            <p className="text-xs font-mono text-muted-foreground">{APP_NAME.toUpperCase()}</p>
+            <p className="mt-2 font-serif text-xl">{DASHBOARD_SIDEBAR_TITLE}</p>
           </div>
           <Navigation />
         </aside>
@@ -84,15 +86,15 @@ export function DashboardShell({ children, orgName, userName, userEmail }: Dashb
                 </SheetTrigger>
                 <SheetContent className="w-70 border-l-border/70 bg-card" side="left">
                   <div className="pt-6">
-                    <p className="text-xs font-mono text-muted-foreground">SPENDLY</p>
-                    <p className="mt-2 font-serif text-xl">Control Center</p>
+                    <p className="text-xs font-mono text-muted-foreground">{APP_NAME.toUpperCase()}</p>
+                    <p className="mt-2 font-serif text-xl">{DASHBOARD_SIDEBAR_TITLE}</p>
                   </div>
                   <Navigation mobile />
                 </SheetContent>
               </Sheet>
 
               <div>
-                <p className="text-xs font-mono text-muted-foreground">ORGANIZATION</p>
+                <p className="text-xs font-mono text-muted-foreground">{ORG_LABEL}</p>
                 <p className="font-medium">{orgName}</p>
               </div>
             </div>

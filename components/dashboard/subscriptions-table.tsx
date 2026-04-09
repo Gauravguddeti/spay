@@ -7,7 +7,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 import {
   AddSubscriptionModal,
   type SubscriptionFormValues,
-} from "@/components/subscriptions/AddSubscriptionModal"
+} from "@/components/dashboard/AddSubscriptionModal"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatInr } from "@/lib/utils/currency"
+import { formatDisplayDate, toInputDate } from "@/lib/utils/dates"
 
 type SubscriptionRow = {
   id: string
@@ -42,36 +44,6 @@ type SubscriptionRow = {
 
 type SubscriptionsTableProps = {
   subscriptions: SubscriptionRow[]
-}
-
-function formatInr(amount: string) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(amount))
-}
-
-function formatDate(value: string | Date | null) {
-  if (!value) {
-    return "-"
-  }
-
-  const date = value instanceof Date ? value : new Date(value)
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date)
-}
-
-function toInputDate(value: string | Date | null) {
-  if (!value) {
-    return ""
-  }
-
-  const date = value instanceof Date ? value : new Date(value)
-  return date.toISOString().slice(0, 10)
 }
 
 function statusVariant(status: string) {
@@ -127,7 +99,7 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
         billingCycle: values.billingCycle,
         nextRenewalDate: values.nextRenewalDate || null,
         status: values.status,
-        addedVia: "manual",
+        detectedVia: "manual",
         lastUsedAt: values.lastUsedAt || null,
       }),
     })
@@ -208,9 +180,9 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
               <TableRow key={subscription.id}>
                 <TableCell className="font-medium">{subscription.name}</TableCell>
                 <TableCell>{subscription.category ?? "-"}</TableCell>
-                <TableCell>{formatInr(subscription.amountInr)}</TableCell>
+                <TableCell>{formatInr(Number(subscription.amountInr))}</TableCell>
                 <TableCell className="capitalize">{subscription.billingCycle}</TableCell>
-                <TableCell>{formatDate(subscription.nextRenewalDate)}</TableCell>
+                <TableCell>{formatDisplayDate(subscription.nextRenewalDate)}</TableCell>
                 <TableCell>
                   <Badge className={statusVariant(subscription.status)} variant="outline">
                     {subscription.status}

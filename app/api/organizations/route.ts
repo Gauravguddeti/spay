@@ -7,6 +7,29 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
+import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
+
+const DEFAULT_ALERT_PREFERENCES = {
+  days30: true,
+  days7: true,
+  days1: false,
+} as const
+
+function buildLocalDemoOrganization(overrides?: {
+  whatsappNumber?: string | null
+  alertPreferences?: {
+    days30: boolean
+    days7: boolean
+    days1: boolean
+  } | null
+}) {
+  return {
+    id: "local-demo-org",
+    name: "Demo Organization",
+    whatsappNumber: overrides?.whatsappNumber ?? null,
+    alertPreferences: overrides?.alertPreferences ?? DEFAULT_ALERT_PREFERENCES,
+  }
+}
 
 const updateOrgSchema = z.object({
   whatsappNumber: z.string().regex(/^\+[1-9]\d{7,14}$/, "Must be a valid E.164 phone number, e.g. +919876543210").optional().nullable(),
@@ -31,10 +54,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const organization = await getOrganizationByOwnerId(session.user.id)
-    if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
-    }
+    const isTempLocalUser = session.user.id === TEMP_LOCAL_TEST_USER_ID
 
     const payload = await request.json()
     const parsed = updateOrgSchema.safeParse(payload)
@@ -43,6 +63,19 @@ export async function PATCH(request: Request) {
         { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
         { status: 400 },
       )
+    }
+
+    if (isTempLocalUser) {
+      const organization = buildLocalDemoOrganization({
+        whatsappNumber: parsed.data.whatsappNumber ?? null,
+        alertPreferences: parsed.data.alertPreferences ?? DEFAULT_ALERT_PREFERENCES,
+      })
+      return NextResponse.json({ organization })
+    }
+
+    const organization = await getOrganizationByOwnerId(session.user.id)
+    if (!organization) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
     const updateData: Record<string, unknown> = {}
@@ -82,6 +115,10 @@ export async function GET() {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (session.user.id === TEMP_LOCAL_TEST_USER_ID) {
+      return NextResponse.json({ organization: buildLocalDemoOrganization() })
     }
 
     const organization = await getOrganizationByOwnerId(session.user.id)
