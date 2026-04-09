@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { DM_Sans, Playfair_Display, JetBrains_Mono } from "next/font/google"
 import { Syne, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "sonner"
+import { Providers } from "@/components/providers"
 import "./globals.css"
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
@@ -28,8 +30,11 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${playfair.variable} ${jetbrainsMono.variable} ${syne.variable} ${inter.variable} font-sans antialiased`}
       >
-        {children}
-        <Analytics />
+        <Providers>
+          {children}
+          <Toaster richColors position="bottom-right" />
+          <Analytics />
+        </Providers>
       </body>
     </html>
   )

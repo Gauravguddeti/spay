@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation"
 import { differenceInCalendarDays, format } from "date-fns"
+import { LayoutDashboard } from "lucide-react"
+import Link from "next/link"
 
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getDashboardStats, getUpcomingRenewals } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
@@ -66,6 +69,7 @@ export default async function DashboardPage() {
 
   const next3Renewals = upcomingRenewals.slice(0, 3)
   const today = new Date()
+  const isEmpty = stats.activeSubscriptionsCount === 0
 
   const cards = [
     {
@@ -112,6 +116,34 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Empty state — no subscriptions yet */}
+      {isEmpty && (
+        <Card className="rounded-3xl border-border/70">
+          <CardContent className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+              <LayoutDashboard className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="font-serif text-xl font-medium">Welcome to Spendly</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                You have no subscriptions tracked yet. Get started:
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button asChild className="rounded-full">
+                <Link href="/dashboard/subscriptions">+ Add Manually</Link>
+              </Button>
+              <Button asChild className="rounded-full" variant="outline">
+                <Link href="/dashboard/import">📄 Upload Bank Statement</Link>
+              </Button>
+              <Button asChild className="rounded-full" variant="outline">
+                <Link href="/dashboard/connect">📧 Scan Gmail</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upcoming Renewals card */}
       {next3Renewals.length > 0 && (

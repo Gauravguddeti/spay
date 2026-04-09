@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { BarChart3, CalendarClock, CreditCard, LayoutDashboard, LogOut, Menu, PlugZap, Settings } from "lucide-react"
+import { BarChart3, CalendarClock, CreditCard, FileSearch, FileText, LayoutDashboard, LogOut, Menu, PlugZap, Settings } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -21,7 +21,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/dashboard/calendar", label: "Renewal Calendar", icon: CalendarClock },
-  { href: "/dashboard/connect", label: "Connect Gmail", icon: PlugZap },
+  { href: "/dashboard/import", label: "Import PDF", icon: FileText },
+  { href: "/dashboard/connect", label: "Connect Gmail", icon: FileSearch },
   { href: "/dashboard/insights", label: "Insights", icon: BarChart3 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]

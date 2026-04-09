@@ -26,9 +26,11 @@ const TEMP_LOCAL_TEST_CREDENTIALS = {
   },
 } as const
 
-const hasGoogleOAuthEnv = Boolean(
-  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
-)
+// Check both NextAuth naming conventions (AUTH_GOOGLE_ID or GOOGLE_CLIENT_ID)
+const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID
+const googleClientSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET
+
+const hasGoogleOAuthEnv = Boolean(googleClientId && googleClientSecret)
 
 const authSecret =
   process.env.AUTH_SECRET ??
@@ -41,8 +43,8 @@ const providers: Array<ReturnType<typeof Google> | ReturnType<typeof Credentials
 if (hasGoogleOAuthEnv) {
   providers.push(
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
       authorization: {
         params: {
           scope:

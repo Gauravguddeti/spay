@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Pencil, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import {
   AddSubscriptionModal,
@@ -106,9 +107,11 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
 
     if (!response.ok) {
       const result = (await response.json()) as { error?: string }
+      toast.error(result.error ?? "Request failed")
       throw new Error(result.error ?? "Request failed")
     }
 
+    toast.success(mode === "add" ? "Subscription added!" : "Subscription updated!")
     setEditing(null)
     router.refresh()
   }
@@ -126,9 +129,11 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
 
       if (!response.ok) {
         const result = (await response.json()) as { error?: string }
-        throw new Error(result.error ?? "Delete failed")
+        toast.error(result.error ?? "Delete failed")
+        return
       }
 
+      toast.success("Subscription deleted")
       setDeleting(null)
       router.refresh()
     } finally {

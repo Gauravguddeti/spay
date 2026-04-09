@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { signIn, useSession } from "next-auth/react"
-import { CheckCircle2, Circle, Loader2, Mail, PlugZap } from "lucide-react"
+import { AlertCircle, CheckCircle2, Circle, ExternalLink, Loader2, Mail, PlugZap } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,7 +32,7 @@ function confidenceClass(score: number): string {
   return "bg-red-100 text-red-800 border-red-200"
 }
 
-export function ConnectPageClient() {
+export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: boolean }) {
   const { data: session } = useSession()
   const isGmailConnected = Boolean((session?.user as { accessToken?: string } | undefined)?.accessToken)
 
@@ -55,9 +56,9 @@ export function ConnectPageClient() {
 
       if (!res.ok) {
         if (data.error === "GMAIL_AUTH_EXPIRED") {
-          setScanError("Your Gmail connection has expired. Please reconnect.")
+          toast.error("Your Gmail connection has expired. Please reconnect.")
         } else {
-          setScanError(data.message ?? data.error ?? "Scan failed")
+          toast.error(data.message ?? data.error ?? "Scan failed")
         }
         return
       }
@@ -67,6 +68,11 @@ export function ConnectPageClient() {
         (data.subscriptions ?? []).filter((s) => s.confidence >= 0.9).map((s) => s.vendorKey),
       )
       setSelected(preSelected)
+      if ((data.subscriptions?.length ?? 0) > 0) {
+        toast.success(`${data.subscriptions!.length} subscriptions detected`)
+      } else {
+        toast.info("No subscriptions found in your Gmail inbox")
+      }
     } finally {
       setScanning(false)
     }
@@ -116,6 +122,7 @@ export function ConnectPageClient() {
         ),
       )
       setImportDone(true)
+      toast.success(`${toImport.length} subscriptions imported!`)
     } finally {
       setImporting(false)
     }
@@ -140,15 +147,44 @@ export function ConnectPageClient() {
             <div>
               <CardTitle className="text-base">Gmail</CardTitle>
               <CardDescription className="text-xs">
-                {isGmailConnected
-                  ? "Connected - read-only access"
-                  : "Connect to scan receipts and invoices"}
+                {!gmailEnabled
+                  ? "Setup required"
+                  : isGmailConnected
+                    ? "Connected - read-only access"
+                    : "Connect to scan receipts and invoices"}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {!isGmailConnected ? (
+          {!gmailEnabled ? (
+            // Google OAuth not configured — show setup instructions
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-amber-800">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="text-sm font-medium">Google OAuth not configured</p>
+              </div>
+              <p className="text-sm text-amber-700">
+                To enable Gmail scanning, add your Google OAuth credentials to{" "}
+                <code className="rounded bg-amber-100 px-1 py-0.5 text-xs font-mono">.env.local</code>:
+              </p>
+              <pre className="rounded-xl bg-amber-100 p-3 text-xs font-mono text-amber-900 overflow-x-auto">{`AUTH_GOOGLE_ID=your_google_client_id
+AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
+              <p className="text-xs text-amber-700">
+                Get credentials from the{" "}
+                <a
+                  className="inline-flex items-center gap-1 underline"
+                  href="https://console.cloud.google.com/apis/credentials"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Google Cloud Console
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                {" "}— enable the Gmail API and create an OAuth 2.0 client ID.
+              </p>
+            </div>
+          ) : !isGmailConnected ? (
             <Button className="rounded-full" onClick={() => signIn("google", { callbackUrl: "/dashboard/connect" })}>
               <PlugZap className="mr-2 h-4 w-4" />
               Connect Gmail

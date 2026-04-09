@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 
 import { db } from "@/lib/db"
-import { organizations, users } from "@/lib/db/schema"
+import { organizations, subscriptions, users } from "@/lib/db/schema"
 
 export type CreateUserWithOrgInput = {
   name: string
@@ -55,4 +55,40 @@ export async function createUserWithOrganization(input: CreateUserWithOrgInput) 
     await db.delete(users).where(eq(users.id, createdUser.id))
     throw error
   }
+}
+
+export async function updateUserName(userId: string, name: string) {
+  const [updated] = await db
+    .update(users)
+    .set({ name })
+    .where(eq(users.id, userId))
+    .returning()
+  return updated ?? null
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string) {
+  const [updated] = await db
+    .update(users)
+    .set({ password: passwordHash })
+    .where(eq(users.id, userId))
+    .returning()
+  return updated ?? null
+}
+
+export async function updateOrganizationName(orgId: string, name: string) {
+  const [updated] = await db
+    .update(organizations)
+    .set({ name })
+    .where(eq(organizations.id, orgId))
+    .returning()
+  return updated ?? null
+}
+
+export async function deleteAllSubscriptionsByOrg(orgId: string) {
+  await db.delete(subscriptions).where(eq(subscriptions.orgId, orgId))
+}
+
+export async function deleteUserAccount(userId: string) {
+  // Cascades delete org → subscriptions → renewalAlerts via FK constraints
+  await db.delete(users).where(eq(users.id, userId))
 }

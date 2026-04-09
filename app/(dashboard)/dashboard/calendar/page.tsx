@@ -4,8 +4,14 @@ import { CalendarIcon, IndianRupee } from "lucide-react"
 
 import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CalendarRenewalView } from "@/components/dashboard/CalendarRenewalView"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { getUpcomingRenewals } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 
@@ -34,18 +40,21 @@ export default async function CalendarPage() {
 
   const today = new Date()
 
-  // Build a map of date-string → renewal items for fast lookup
-  const renewalMap = new Map<string, typeof renewals>()
-  for (const renewal of renewals) {
-    if (!renewal.nextRenewalDate) continue
-    const key = format(new Date(renewal.nextRenewalDate), "yyyy-MM-dd")
-    const existing = renewalMap.get(key) ?? []
-    renewalMap.set(key, [...existing, renewal])
-  }
-
   const renewalDates = renewals
     .filter((r) => r.nextRenewalDate)
     .map((r) => new Date(r.nextRenewalDate!))
+
+  // Serialise renewal data for client component
+  const renewalItems = renewals.map((r) => ({
+    id: r.id,
+    name: r.name,
+    amountInr: r.amountInr,
+    billingCycle: r.billingCycle,
+    category: r.category,
+    nextRenewalDate: r.nextRenewalDate
+      ? new Date(r.nextRenewalDate).toISOString()
+      : null,
+  }))
 
   return (
     <section className="space-y-4">
@@ -58,18 +67,12 @@ export default async function CalendarPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-        {/* Calendar */}
-        <div className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm">
-          <Calendar
-            className="rounded-2xl"
-            mode="multiple"
-            selected={renewalDates}
-            modifiers={{ renewal: renewalDates }}
-            modifiersClassNames={{
-              renewal: "bg-primary/20 font-bold text-primary rounded-full",
-            }}
-          />
-        </div>
+        {/* Interactive calendar — client component */}
+        <CalendarRenewalView
+          orgId={organization.id}
+          renewalDates={renewalDates.map((d) => d.toISOString())}
+          renewals={renewalItems}
+        />
 
         {/* Renewal list */}
         <div className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm">
@@ -78,7 +81,10 @@ export default async function CalendarPage() {
           {renewals.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
               <CalendarIcon className="h-8 w-8 opacity-40" />
-              <p className="text-sm">No renewals in the next 30 days</p>
+              <p className="text-sm font-medium">
+                You&apos;re all clear this month 🎉
+              </p>
+              <p className="text-xs">No renewals in the next 30 days</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -90,21 +96,25 @@ export default async function CalendarPage() {
 
                 return (
                   <Card
-                    className="rounded-2xl border-border/70"
+                    className={`rounded-2xl border-border/70 ${daysLeft <= 7 ? "border-red-200 bg-red-50/40" : ""}`}
                     key={renewal.id}
                   >
                     <CardHeader className="pb-2 pt-4 px-4">
                       <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base font-medium">{renewal.name}</CardTitle>
-                        <Badge
-                          className={urgencyClass(daysLeft)}
-                          variant="outline"
-                        >
-                          {isToday ? "Today" : daysLeft === 1 ? "Tomorrow" : `${daysLeft}d`}
+                        <CardTitle className="text-base font-medium">
+                          {renewal.name}
+                        </CardTitle>
+                        <Badge className={urgencyClass(daysLeft)} variant="outline">
+                          {isToday
+                            ? "Today"
+                            : daysLeft === 1
+                              ? "Tomorrow"
+                              : `${daysLeft}d`}
                         </Badge>
                       </div>
                       <CardDescription className="text-xs">
-                        {renewal.category ?? "Uncategorized"} · {format(renewalDate, "dd MMM yyyy")}
+                        {renewal.category ?? "Uncategorized"} ·{" "}
+                        {format(renewalDate, "dd MMM yyyy")}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
