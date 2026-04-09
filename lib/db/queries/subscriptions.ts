@@ -1,11 +1,13 @@
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm"
+import { revalidateTag, unstable_cache } from "next/cache"
 
 import { db } from "@/lib/db"
 import { subscriptions } from "@/lib/db/schema"
 
 export type BillingCycle = "monthly" | "annual" | "one-time"
 export type SubscriptionStatus = "active" | "cancelled" | "paused"
-export type AddedVia = "manual" | "pdf" | "email"
+export type DetectedVia = "manual" | "gmail" | "bank_statement"
+export type UsageStatus = "active" | "unused" | "unknown"
 
 export type AddSubscriptionInput = {
   orgId: string
@@ -15,14 +17,27 @@ export type AddSubscriptionInput = {
   billingCycle: BillingCycle
   nextRenewalDate?: Date | null
   status?: SubscriptionStatus
-  addedVia?: AddedVia
+  detectedVia?: DetectedVia
   lastUsedAt?: Date | null
+  usageStatus?: UsageStatus
+  originalAmount?: string | null
+  originalCurrency?: string | null
 }
 
 export type UpdateSubscriptionInput = Partial<
   Pick<
     AddSubscriptionInput,
-    "name" | "category" | "amountInr" | "billingCycle" | "nextRenewalDate" | "status" | "addedVia" | "lastUsedAt"
+    | "name"
+    | "category"
+    | "amountInr"
+    | "billingCycle"
+    | "nextRenewalDate"
+    | "status"
+    | "detectedVia"
+    | "lastUsedAt"
+    | "usageStatus"
+    | "originalAmount"
+    | "originalCurrency"
   >
 >
 
@@ -44,6 +59,24 @@ export async function getSubscriptionByIdForOrg(id: string, orgId: string) {
   return subscription ?? null
 }
 
+export async function getUpcomingRenewals(orgId: string) {
+  const today = new Date()
+  const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+
+  return db
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.orgId, orgId),
+        eq(subscriptions.status, "active"),
+        sql`${subscriptions.nextRenewalDate} >= ${today}`,
+        sql`${subscriptions.nextRenewalDate} <= ${in30Days}`,
+      ),
+    )
+    .orderBy(subscriptions.nextRenewalDate)
+}
+
 export async function addSubscription(data: AddSubscriptionInput) {
   const [created] = await db
     .insert(subscriptions)
@@ -55,15 +88,23 @@ export async function addSubscription(data: AddSubscriptionInput) {
       billingCycle: data.billingCycle,
       nextRenewalDate: data.nextRenewalDate ?? null,
       status: data.status ?? "active",
-      addedVia: data.addedVia ?? "manual",
+      detectedVia: data.detectedVia ?? "manual",
       lastUsedAt: data.lastUsedAt ?? null,
+      usageStatus: data.usageStatus ?? "unknown",
+      originalAmount: data.originalAmount ?? null,
+      originalCurrency: data.originalCurrency ?? "INR",
     })
     .returning()
 
+  revalidateTag(`org-stats-${data.orgId}`, "default")
   return created
 }
 
-export async function updateSubscription(id: string, orgId: string, data: UpdateSubscriptionInput) {
+export async function updateSubscription(
+  id: string,
+  orgId: string,
+  data: UpdateSubscriptionInput,
+) {
   const [updated] = await db
     .update(subscriptions)
     .set({
@@ -73,12 +114,16 @@ export async function updateSubscription(id: string, orgId: string, data: Update
       ...(data.billingCycle !== undefined ? { billingCycle: data.billingCycle } : {}),
       ...(data.nextRenewalDate !== undefined ? { nextRenewalDate: data.nextRenewalDate } : {}),
       ...(data.status !== undefined ? { status: data.status } : {}),
-      ...(data.addedVia !== undefined ? { addedVia: data.addedVia } : {}),
+      ...(data.detectedVia !== undefined ? { detectedVia: data.detectedVia } : {}),
       ...(data.lastUsedAt !== undefined ? { lastUsedAt: data.lastUsedAt } : {}),
+      ...(data.usageStatus !== undefined ? { usageStatus: data.usageStatus } : {}),
+      ...(data.originalAmount !== undefined ? { originalAmount: data.originalAmount } : {}),
+      ...(data.originalCurrency !== undefined ? { originalCurrency: data.originalCurrency } : {}),
     })
     .where(and(eq(subscriptions.id, id), eq(subscriptions.orgId, orgId)))
     .returning()
 
+  revalidateTag(`org-stats-${orgId}`, "default")
   return updated ?? null
 }
 
@@ -88,8 +133,11 @@ export async function deleteSubscription(id: string, orgId: string) {
     .where(and(eq(subscriptions.id, id), eq(subscriptions.orgId, orgId)))
     .returning({ id: subscriptions.id })
 
+  revalidateTag(`org-stats-${orgId}`, "default")
   return deleted ?? null
 }
+
+// ─── Dashboard Stats (Section 7: cached per org, 5-min TTL) ────────────────
 
 export type DashboardStats = {
   totalMonthlySpendInr: number
@@ -99,7 +147,7 @@ export type DashboardStats = {
   potentialSavingsInr: number
 }
 
-export async function getDashboardStats(orgId: string): Promise<DashboardStats> {
+async function fetchDashboardStats(orgId: string): Promise<DashboardStats> {
   const [row] = await db
     .select({
       totalMonthlySpendInr: sql<string>`
@@ -151,4 +199,15 @@ export async function getDashboardStats(orgId: string): Promise<DashboardStats> 
     potentialSavingsCount: Number(row?.potentialSavingsCount ?? 0),
     potentialSavingsInr: Number(row?.potentialSavingsInr ?? 0),
   }
+}
+
+export function getDashboardStats(orgId: string): Promise<DashboardStats> {
+  return unstable_cache(
+    () => fetchDashboardStats(orgId),
+    [`org-stats-${orgId}`],
+    {
+      revalidate: 300, // 5 minutes
+      tags: [`org-stats-${orgId}`],
+    },
+  )()
 }

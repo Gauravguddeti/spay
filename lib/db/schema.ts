@@ -4,6 +4,7 @@ import {
   check,
   date,
   integer,
+  jsonb,
   numeric,
   pgTable,
   primaryKey,
@@ -70,6 +71,10 @@ export const organizations = pgTable("organizations", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   ownerId: text("owner_id").references(() => users.id, { onDelete: "set null" }),
+  // WhatsApp number for renewal alerts, e.g. "+919876543210"
+  whatsappNumber: text("whatsapp_number"),
+  // Alert preferences: { days30: boolean, days7: boolean, days1: boolean }
+  alertPreferences: jsonb("alert_preferences"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -88,8 +93,15 @@ export const subscriptions = pgTable(
     billingCycle: text("billing_cycle").notNull(),
     nextRenewalDate: date("next_renewal_date", { mode: "date" }),
     status: text("status").default("active").notNull(),
-    addedVia: text("added_via"),
+    // Renamed from added_via — tracks how the subscription was detected
+    detectedVia: text("detected_via").default("manual"),
     lastUsedAt: date("last_used_at", { mode: "date" }),
+    // Usage health status
+    usageStatus: text("usage_status").default("unknown").notNull(),
+    // Original currency fields — populated when detected from Gmail receipts
+    // INR conversion uses a static rate map; see lib/integrations/gmail.ts
+    originalAmount: numeric("original_amount", { precision: 12, scale: 2 }),
+    originalCurrency: text("original_currency").default("INR"),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -103,9 +115,14 @@ export const subscriptions = pgTable(
       "subscriptions_status_check",
       sql`${table.status} in ('active', 'cancelled', 'paused')`,
     ),
+    // Renamed constraint: added_via → detected_via with updated allowed values
     check(
-      "subscriptions_added_via_check",
-      sql`${table.addedVia} in ('manual', 'pdf', 'email') or ${table.addedVia} is null`,
+      "subscriptions_detected_via_check",
+      sql`${table.detectedVia} in ('manual', 'gmail', 'bank_statement') or ${table.detectedVia} is null`,
+    ),
+    check(
+      "subscriptions_usage_status_check",
+      sql`${table.usageStatus} in ('active', 'unused', 'unknown')`,
     ),
   ],
 )
@@ -117,6 +134,7 @@ export const renewalAlerts = pgTable("renewal_alerts", {
     .references(() => subscriptions.id, { onDelete: "cascade" }),
   alertDate: date("alert_date", { mode: "date" }).notNull(),
   isSent: boolean("is_sent").default(false).notNull(),
+  sentAt: timestamp("sent_at", { mode: "date", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -126,3 +144,10 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Organization = typeof organizations.$inferSelect
 export type NewOrganization = typeof organizations.$inferInsert
+export type Subscription = typeof subscriptions.$inferSelect
+export type NewSubscription = typeof subscriptions.$inferInsert
+export type AlertPreferences = {
+  days30: boolean
+  days7: boolean
+  days1: boolean
+}
