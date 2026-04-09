@@ -47,7 +47,7 @@ const CATEGORIES = [
 function confidenceColor(c: "high" | "medium" | "low") {
   if (c === "high") return "bg-emerald-100 text-emerald-800 border-emerald-200"
   if (c === "medium") return "bg-amber-100 text-amber-800 border-amber-200"
-  return "bg-red-100 text-red-800 border-red-200"
+  return "bg-red-500/20 text-red-800 border-red-200"
 }
 
 function formatInr(n: number) {
@@ -139,7 +139,7 @@ export function ReviewDetectedSubscriptions({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-12 text-center shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-12 text-center shadow-sm">
         <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
         <p className="font-medium">No subscriptions detected</p>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -150,7 +150,7 @@ export function ReviewDetectedSubscriptions({
   }
 
   return (
-    <div className="rounded-3xl border border-border/70 bg-card shadow-sm">
+    <div className="rounded-none border border-border/70 bg-card shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
         <div>
@@ -161,7 +161,7 @@ export function ReviewDetectedSubscriptions({
         </div>
         <div className="flex items-center gap-3">
           <Button
-            className="rounded-full"
+            className="rounded-none"
             onClick={toggleAll}
             size="sm"
             variant="outline"
@@ -174,7 +174,7 @@ export function ReviewDetectedSubscriptions({
             {allSelected ? "Deselect All" : "Select All"}
           </Button>
           <Button
-            className="rounded-full"
+            className="rounded-none"
             disabled={!someSelected || importing}
             onClick={handleImport}
           >
@@ -241,7 +241,7 @@ export function ReviewDetectedSubscriptions({
                     }
                     value={categories[item.vendorKey] ?? item.category}
                   >
-                    <SelectTrigger className="h-8 w-36 rounded-full text-xs">
+                    <SelectTrigger className="h-8 w-36 rounded-none text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

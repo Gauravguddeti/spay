@@ -29,7 +29,7 @@ function confidenceLabel(score: number): string {
 function confidenceClass(score: number): string {
   if (score >= 0.9) return "bg-emerald-100 text-emerald-800 border-emerald-200"
   if (score >= 0.7) return "bg-amber-100 text-amber-800 border-amber-200"
-  return "bg-red-100 text-red-800 border-red-200"
+  return "bg-red-500/20 text-red-800 border-red-200"
 }
 
 export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: boolean }) {
@@ -130,7 +130,7 @@ export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: bool
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
         <p className="text-xs font-mono text-muted-foreground">INTEGRATIONS</p>
         <h1 className="mt-2 font-serif text-3xl">Connect Gmail</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -138,10 +138,10 @@ export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: bool
         </p>
       </div>
 
-      <Card className="rounded-3xl border-border/70">
+      <Card className="rounded-none border-border/70">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+            <div className="flex h-10 w-10 items-center justify-center rounded-none bg-red-500/20">
               <Mail className="h-5 w-5 text-red-600" />
             </div>
             <div>
@@ -159,7 +159,7 @@ export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: bool
         <CardContent>
           {!gmailEnabled ? (
             // Google OAuth not configured — show setup instructions
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <div className="rounded-none border border-amber-200 bg-amber-50 p-4 space-y-3">
               <div className="flex items-center gap-2 text-amber-800">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <p className="text-sm font-medium">Google OAuth not configured</p>
@@ -168,7 +168,7 @@ export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: bool
                 To enable Gmail scanning, add your Google OAuth credentials to{" "}
                 <code className="rounded bg-amber-100 px-1 py-0.5 text-xs font-mono">.env.local</code>:
               </p>
-              <pre className="rounded-xl bg-amber-100 p-3 text-xs font-mono text-amber-900 overflow-x-auto">{`AUTH_GOOGLE_ID=your_google_client_id
+              <pre className="rounded-none bg-amber-100 p-3 text-xs font-mono text-amber-900 overflow-x-auto">{`AUTH_GOOGLE_ID=your_google_client_id
 AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
               <p className="text-xs text-amber-700">
                 Get credentials from the{" "}
@@ -185,12 +185,12 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
               </p>
             </div>
           ) : !isGmailConnected ? (
-            <Button className="rounded-full" onClick={() => signIn("google", { callbackUrl: "/dashboard/connect" })}>
+            <Button className="rounded-none" onClick={() => signIn("google", { callbackUrl: "/dashboard/connect" })}>
               <PlugZap className="mr-2 h-4 w-4" />
               Connect Gmail
             </Button>
           ) : (
-            <Button className="rounded-full" disabled={scanning} onClick={handleScan} variant="outline">
+            <Button className="rounded-none" disabled={scanning} onClick={handleScan} variant="outline">
               {scanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
               {scanning ? "Scanning your inbox for subscriptions..." : "Re-scan inbox"}
             </Button>
@@ -199,19 +199,19 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
       </Card>
 
       {scanError && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {scanError}
         </div>
       )}
 
       {importDone && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-none border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Subscriptions imported successfully. View them in the <a className="underline" href="/dashboard/subscriptions">Subscriptions</a> tab.
         </div>
       )}
 
       {detected !== null && !importDone && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardHeader>
             <CardTitle className="text-base">
               {detected.length === 0
@@ -230,7 +230,7 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
                 const isSelected = selected.has(sub.vendorKey)
                 return (
                   <button
-                    className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-none border px-4 py-3 text-left transition-colors ${
                       isSelected ? "border-primary bg-primary/5" : "border-border/70 hover:bg-muted/50"
                     }`}
                     key={sub.vendorKey}
@@ -263,7 +263,7 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
                 <p className="text-xs text-muted-foreground">
                   {selected.size} of {detected.length} selected
                 </p>
-                <Button className="rounded-full" disabled={selected.size === 0 || importing} onClick={handleImport}>
+                <Button className="rounded-none" disabled={selected.size === 0 || importing} onClick={handleImport}>
                   {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {importing ? "Importing..." : `Import ${selected.size} subscription${selected.size !== 1 ? "s" : ""}`}
                 </Button>

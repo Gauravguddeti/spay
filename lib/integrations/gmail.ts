@@ -1,5 +1,5 @@
 /**
- * Gmail integration utility for Spendly.
+ * Gmail integration utility for SPAY.
  *
  * Handles:
  * - Access token refresh (Google tokens expire after 1 hour)

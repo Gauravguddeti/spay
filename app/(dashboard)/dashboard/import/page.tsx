@@ -85,7 +85,7 @@ export default function ImportPage() {
   return (
     <section className="space-y-4">
       {/* Page header */}
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
         <p className="text-xs font-mono text-muted-foreground">IMPORT</p>
         <h1 className="mt-2 font-serif text-3xl">Upload Bank Statement</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export default function ImportPage() {
       {/* Upload zone */}
       {uploadState !== "done" && (
         <label
-          className={`flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed bg-card px-6 py-16 text-center shadow-sm transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center gap-4 rounded-none border-2 border-dashed bg-card px-6 py-16 text-center shadow-sm transition-colors cursor-pointer ${
             isDragging
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary/50 hover:bg-muted/30"
@@ -119,7 +119,7 @@ export default function ImportPage() {
 
           {uploadState === "uploading" ? (
             <>
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <div className="flex h-16 w-16 items-center justify-center rounded-none bg-primary/10">
                 <FileText className="h-8 w-8 text-primary animate-pulse" />
               </div>
               <div>
@@ -131,7 +131,7 @@ export default function ImportPage() {
             </>
           ) : uploadState === "error" ? (
             <>
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <div className="flex h-16 w-16 items-center justify-center rounded-none bg-red-500/20">
                 <X className="h-8 w-8 text-red-600" />
               </div>
               <div>
@@ -143,7 +143,7 @@ export default function ImportPage() {
             </>
           ) : (
             <>
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+              <div className="flex h-16 w-16 items-center justify-center rounded-none bg-secondary">
                 <Upload className="h-8 w-8 text-primary" />
               </div>
               <div>
@@ -168,7 +168,7 @@ export default function ImportPage() {
               Analysis complete — {fileName}
             </p>
             <Button
-              className="rounded-full"
+              className="rounded-none"
               onClick={handleReset}
               size="sm"
               variant="outline"

@@ -133,7 +133,7 @@ export function SignupForm() {
         />
       </div>
 
-      <Button className="w-full rounded-full" disabled={isLoading} type="submit">
+      <Button className="w-full rounded-none" disabled={isLoading} type="submit">
         {isLoading ? "Creating account..." : "Create SPAY Account"}
       </Button>
 

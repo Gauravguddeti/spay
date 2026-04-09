@@ -1,5 +1,5 @@
 /**
- * Spendly Insights Analyzer — Phase 6
+ * SPAY Insights Analyzer — Phase 6
  *
  * Pure, deterministic functions over a pre-fetched subscription array.
  * No DB calls — pass the full org subscriptions from the page.

@@ -1,5 +1,5 @@
 /**
- * Email Parser for Spendly — Phase 5
+ * Email Parser for SPAY — Phase 5
  *
  * Thin adapter over the Gmail integration's vendor-matching logic.
  * Provides the canonical /lib/parsers/emailParser.ts entry point.

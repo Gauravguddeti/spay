@@ -5,7 +5,7 @@ import * as schema from "@/lib/db/schema"
 
 const connectionString =
   process.env.DATABASE_URL ??
-  "postgresql://placeholder:placeholder@localhost:5432/spendly"
+  "postgresql://placeholder:placeholder@localhost:5432/spay"
 
 const client = neon(connectionString)
 

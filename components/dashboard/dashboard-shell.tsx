@@ -40,7 +40,7 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
           <Link
             key={item.href}
             className={cn(
-              "flex items-center gap-2 rounded-full px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-2 rounded-none px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors",
               isActive
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -67,28 +67,28 @@ export function DashboardShell({ children, orgName, userName, userEmail }: Dashb
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-6 md:px-6">
-        <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-64 rounded-3xl border border-border/70 bg-card p-4 shadow-sm md:block">
-          <div className="mb-6 border-b border-border/70 pb-4">
-            <p className="text-xs font-mono text-muted-foreground">{APP_NAME.toUpperCase()}</p>
-            <p className="mt-2 font-serif text-xl">{DASHBOARD_SIDEBAR_TITLE}</p>
+        <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-64 rounded-none border border-border/70 bg-card p-4 shadow-sm md:block">
+          <div className="mb-6 border-b border-border/70 pb-6 pt-2">
+            <p className="font-serif text-3xl font-extrabold tracking-tighter">SPAY</p>
+            <p className="mt-1 text-xs font-mono text-muted-foreground uppercase tracking-widest text-[#5a9078]">Control Center</p>
           </div>
           <Navigation />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <header className="flex items-center justify-between rounded-3xl border border-border/70 bg-card px-4 py-3 shadow-sm md:px-6">
+          <header className="flex items-center justify-between rounded-none border border-border/70 bg-card px-4 py-3 shadow-sm md:px-6">
             <div className="flex items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button className="md:hidden" size="icon" variant="outline">
+                  <Button className="md:hidden rounded-none" size="icon" variant="outline">
                     <Menu className="h-4 w-4" />
                     <span className="sr-only">Open menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="w-70 border-l-border/70 bg-card" side="left">
-                  <div className="pt-6">
-                    <p className="text-xs font-mono text-muted-foreground">{APP_NAME.toUpperCase()}</p>
-                    <p className="mt-2 font-serif text-xl">{DASHBOARD_SIDEBAR_TITLE}</p>
+                <SheetContent className="w-70 rounded-none border-l-border/70 bg-card" side="left">
+                  <div className="pt-6 pb-6 border-b border-border/70 mb-6">
+                    <p className="font-serif text-3xl font-extrabold tracking-tighter">SPAY</p>
+                    <p className="mt-1 text-xs font-mono text-muted-foreground uppercase tracking-widest text-[#5a9078]">Control Center</p>
                   </div>
                   <Navigation mobile />
                 </SheetContent>
@@ -106,12 +106,12 @@ export function DashboardShell({ children, orgName, userName, userEmail }: Dashb
                 <p className="text-xs text-muted-foreground">{userEmail}</p>
               </div>
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary text-sm font-medium">
+              <div className="flex h-10 w-10 items-center justify-center rounded-none border border-border bg-secondary text-sm font-medium">
                 {initials}
               </div>
 
               <Button
-                className="rounded-full"
+                className="rounded-none"
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 size="sm"
                 variant="outline"

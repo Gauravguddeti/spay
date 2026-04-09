@@ -10,14 +10,14 @@ export function SkeletonTable({ rows = 5, cols = 6, className }: Props) {
   return (
     <div
       className={cn(
-        "rounded-3xl border border-border/70 bg-card p-6 shadow-sm",
+        "rounded-none border border-border/70 bg-card p-6 shadow-sm",
         className,
       )}
     >
       {/* Header */}
       <div className="mb-4 flex justify-between">
-        <div className="h-7 w-32 animate-pulse rounded-lg bg-muted" />
-        <div className="h-9 w-36 animate-pulse rounded-full bg-muted" />
+        <div className="h-7 w-32 animate-pulse rounded-none bg-muted" />
+        <div className="h-9 w-36 animate-pulse rounded-none bg-muted" />
       </div>
 
       {/* Table header */}

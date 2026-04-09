@@ -1,7 +1,7 @@
 /**
- * Spendly Design Tokens
+ * SPAY Design Tokens
  * Extracted from globals.css — use these to stay consistent across all phases.
- * These are the canonical design values for the Spendly dashboard.
+ * These are the canonical design values for the SPAY dashboard.
  */
 
 export const colors = {

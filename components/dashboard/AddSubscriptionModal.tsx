@@ -142,7 +142,7 @@ export function AddSubscriptionModal({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="rounded-3xl border-border/70 bg-card sm:max-w-xl">
+      <DialogContent className="rounded-none border-border/70 bg-card sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">
             {mode === "add" ? "Add Subscription" : "Edit Subscription"}
@@ -274,7 +274,7 @@ export function AddSubscriptionModal({
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
           <DialogFooter>
-            <Button className="rounded-full" disabled={isSubmitting} type="submit">
+            <Button className="rounded-none" disabled={isSubmitting} type="submit">
               {isSubmitting
                 ? mode === "add"
                   ? "Adding..."

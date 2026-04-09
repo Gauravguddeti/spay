@@ -1,5 +1,5 @@
 /**
- * Bank Statement Parser for Spendly
+ * Bank Statement Parser for SPAY
  *
  * Parses raw text extracted from PDF bank statements (HDFC, ICICI, SBI, Axis, Kotak, Yes Bank).
  * Detects SaaS vendor charges, extracts amounts, converts USD→INR, assigns categories.

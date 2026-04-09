@@ -7,7 +7,9 @@ import { auth } from "@/auth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getDashboardStats, getUpcomingRenewals } from "@/lib/db/queries/subscriptions"
+import { AIInsightCard } from "@/components/dashboard/ai-insight-card"
+import { generateAiInsight } from "@/lib/insights/ai-generator"
+import { getDashboardStats, getUpcomingRenewals, getSubscriptionsByOrg } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
 
@@ -20,7 +22,7 @@ function formatInr(amount: number) {
 }
 
 function urgencyClass(daysLeft: number): string {
-  if (daysLeft <= 3) return "bg-red-100 text-red-800 border-red-200"
+  if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
   if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
   return "bg-emerald-100 text-emerald-800 border-emerald-200"
 }
@@ -42,6 +44,7 @@ export default async function DashboardPage() {
     potentialSavingsInr: 0,
   }
   let upcomingRenewals: Awaited<ReturnType<typeof getUpcomingRenewals>> = []
+  let allSubs: Awaited<ReturnType<typeof getSubscriptionsByOrg>> = []
 
   if (!isTempLocalUser) {
     try {
@@ -51,9 +54,10 @@ export default async function DashboardPage() {
         redirect("/login")
       }
 
-      ;[stats, upcomingRenewals] = await Promise.all([
+      ;[stats, upcomingRenewals, allSubs] = await Promise.all([
         getDashboardStats(organization.id),
         getUpcomingRenewals(organization.id),
+        getSubscriptionsByOrg(organization.id),
       ])
     } catch {
       stats = {
@@ -70,6 +74,14 @@ export default async function DashboardPage() {
   const next3Renewals = upcomingRenewals.slice(0, 3)
   const today = new Date()
   const isEmpty = stats.activeSubscriptionsCount === 0
+
+  const aiInsight = generateAiInsight(allSubs.map(s => ({
+    ...s,
+    nextRenewalDate: s.nextRenewalDate,
+    lastUsedAt: s.lastUsedAt,
+    createdAt: s.createdAt,
+    category: s.category
+  })))
 
   const cards = [
     {
@@ -96,14 +108,16 @@ export default async function DashboardPage() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm mb-6">
         <p className="text-xs font-mono text-muted-foreground">SPEND OVERVIEW</p>
         <h1 className="mt-2 font-serif text-3xl">Dashboard</h1>
       </div>
 
+      {!isEmpty && <AIInsightCard insight={aiInsight} />}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
-          <Card className="rounded-3xl border-border/70" key={card.title}>
+          <Card className="rounded-none border-border/70" key={card.title}>
             <CardHeader className="pb-2">
               <CardDescription className="text-xs font-mono uppercase tracking-wide">
                 {card.title}
@@ -119,25 +133,25 @@ export default async function DashboardPage() {
 
       {/* Empty state — no subscriptions yet */}
       {isEmpty && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardContent className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+            <div className="flex h-16 w-16 items-center justify-center rounded-none bg-secondary">
               <LayoutDashboard className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <p className="font-serif text-xl font-medium">Welcome to Spendly</p>
+              <p className="font-serif text-xl font-medium">Welcome to SPAY</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 You have no subscriptions tracked yet. Get started:
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-3">
-              <Button asChild className="rounded-full">
+              <Button asChild className="rounded-none">
                 <Link href="/dashboard/subscriptions">+ Add Manually</Link>
               </Button>
-              <Button asChild className="rounded-full" variant="outline">
+              <Button asChild className="rounded-none" variant="outline">
                 <Link href="/dashboard/import">📄 Upload Bank Statement</Link>
               </Button>
-              <Button asChild className="rounded-full" variant="outline">
+              <Button asChild className="rounded-none" variant="outline">
                 <Link href="/dashboard/connect">📧 Scan Gmail</Link>
               </Button>
             </div>
@@ -147,7 +161,7 @@ export default async function DashboardPage() {
 
       {/* Upcoming Renewals card */}
       {next3Renewals.length > 0 && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               UPCOMING RENEWALS
@@ -163,7 +177,7 @@ export default async function DashboardPage() {
 
               return (
                 <div
-                  className="flex items-center justify-between rounded-2xl border border-border/70 px-4 py-3"
+                  className="flex items-center justify-between rounded-none border border-border/70 px-4 py-3"
                   key={renewal.id}
                 >
                   <div className="min-w-0">

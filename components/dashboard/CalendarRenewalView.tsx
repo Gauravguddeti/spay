@@ -29,7 +29,7 @@ type Props = {
 }
 
 function urgencyClass(daysLeft: number) {
-  if (daysLeft <= 3) return "bg-red-100 text-red-800 border-red-200"
+  if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
   if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
   return "bg-emerald-100 text-emerald-800 border-emerald-200"
 }
@@ -83,9 +83,9 @@ export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
   }
 
   return (
-    <div className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm">
+    <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm">
       <Calendar
-        className="rounded-2xl"
+        className="rounded-none"
         mode="multiple"
         selected={parsedDates}
         modifiers={{ renewal: parsedDates }}
@@ -103,7 +103,7 @@ export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
             if (!hasRenewal) {
               return (
                 <td {...dayProps}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md text-sm">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-none text-sm">
                     {date.getDate()}
                   </div>
                 </td>
@@ -115,16 +115,16 @@ export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
-                      className="relative flex h-9 w-9 flex-col items-center justify-center gap-0.5 rounded-md text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                      className="relative flex h-9 w-9 flex-col items-center justify-center gap-0.5 rounded-none text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
                       type="button"
                     >
                       <span>{date.getDate()}</span>
                       <span
-                        className={`absolute bottom-0.5 h-1.5 w-1.5 rounded-full ${urgencyDotClass(daysLeft)}`}
+                        className={`absolute bottom-0.5 h-1.5 w-1.5 rounded-none ${urgencyDotClass(daysLeft)}`}
                       />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 rounded-2xl border-border/70 bg-card p-4 shadow-lg">
+                  <PopoverContent className="w-72 rounded-none border-border/70 bg-card p-4 shadow-lg">
                     <div className="space-y-2">
                       <p className="text-xs font-mono text-muted-foreground">
                         {format(date, "dd MMM yyyy")} · {items.length} renewal
@@ -132,7 +132,7 @@ export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
                       </p>
                       {items.map((renewal) => (
                         <div
-                          className="flex items-start justify-between gap-2 rounded-xl border border-border/70 p-3"
+                          className="flex items-start justify-between gap-2 rounded-none border border-border/70 p-3"
                           key={renewal.id}
                         >
                           <div className="min-w-0">
@@ -161,7 +161,7 @@ export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
                                   : `${daysLeft}d`}
                             </Badge>
                             <button
-                              className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1 rounded-none bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-500/20 transition-colors disabled:opacity-50"
                               disabled={cancellingId === renewal.id}
                               onClick={() => void handleCancel(renewal.id)}
                               type="button"

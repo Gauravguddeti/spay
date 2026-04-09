@@ -7,7 +7,7 @@ type UpcomingRenewalsCardProps = {
 
 export function UpcomingRenewalsCard({ count, windowDays = 30 }: UpcomingRenewalsCardProps) {
   return (
-    <Card className="rounded-3xl border-border/70">
+    <Card className="rounded-none border-border/70">
       <CardHeader className="pb-2">
         <CardDescription className="text-xs font-mono uppercase tracking-wide">
           Upcoming Renewals

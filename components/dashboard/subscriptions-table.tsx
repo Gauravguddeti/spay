@@ -53,7 +53,7 @@ function statusVariant(status: string) {
   }
 
   if (status === "cancelled") {
-    return "bg-red-100 text-red-800 border-red-200"
+    return "bg-red-500/20 text-red-800 border-red-200"
   }
 
   return "bg-amber-100 text-amber-800 border-amber-200"
@@ -142,14 +142,14 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
   }
 
   return (
-    <section className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm md:p-6">
+    <section className="rounded-none border border-border/70 bg-card p-4 shadow-sm md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-mono text-muted-foreground">SUBSCRIPTIONS</p>
           <h2 className="font-serif text-3xl">All Tools</h2>
         </div>
         <Button
-          className="rounded-full"
+          className="rounded-none"
           onClick={() => {
             setMode("add")
             setEditing(null)
@@ -232,7 +232,7 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
       />
 
       <AlertDialog onOpenChange={(open) => !open && setDeleting(null)} open={Boolean(deleting)}>
-        <AlertDialogContent className="rounded-3xl border-border/70 bg-card">
+        <AlertDialogContent className="rounded-none border-border/70 bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete subscription?</AlertDialogTitle>
             <AlertDialogDescription>

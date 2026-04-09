@@ -42,7 +42,7 @@ import {
   getUnusedSubscriptions,
 } from "@/lib/insights/analyzer"
 
-const DISMISS_KEY = "spendly_dismissed_insights"
+const DISMISS_KEY = "spay_dismissed_insights"
 
 function loadDismissed(): Set<string> {
   try {
@@ -78,7 +78,7 @@ const CustomTooltip = ({
 }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl border border-border/70 bg-card px-3 py-2 shadow-md text-sm">
+    <div className="rounded-none border border-border/70 bg-card px-3 py-2 shadow-md text-sm">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-semibold">{formatInr(payload[0].value)}</p>
     </div>
@@ -158,7 +158,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
   return (
     <section className="space-y-4">
       {/* Header */}
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
         <p className="text-xs font-mono text-muted-foreground">INSIGHTS</p>
         <h1 className="mt-2 font-serif text-3xl">Spend Insights</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -168,7 +168,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Potential savings banner */}
       {potentialSavings > 0 && (
-        <div className="rounded-3xl border border-primary/30 bg-primary/5 px-6 py-5 shadow-sm">
+        <div className="rounded-none border border-primary/30 bg-primary/5 px-6 py-5 shadow-sm">
           <div className="flex items-center gap-3">
             <TrendingUp className="h-6 w-6 text-primary shrink-0" />
             <div>
@@ -188,14 +188,14 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Empty state */}
       {subscriptions.length === 0 && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground opacity-40" />
             <p className="font-medium">Add more subscriptions to unlock insights</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Insights will surface once you have at least a few subscriptions tracked.
             </p>
-            <Button asChild className="mt-4 rounded-full" variant="outline">
+            <Button asChild className="mt-4 rounded-none" variant="outline">
               <a href="/dashboard/subscriptions">Add Subscriptions</a>
             </Button>
           </CardContent>
@@ -204,7 +204,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* All insights dismissed */}
       {subscriptions.length > 0 && noInsights && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <CheckCircle className="mb-3 h-10 w-10 text-emerald-500" />
             <p className="font-medium">Looking great! No issues found</p>
@@ -217,7 +217,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 1 — Unused Subscriptions */}
       {unused.length > 0 && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -234,7 +234,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
           <CardContent className="space-y-3">
             {unused.map((sub) => (
               <div
-                className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-none border border-border/70 px-4 py-3"
                 key={sub.id}
               >
                 <div className="min-w-0">
@@ -248,7 +248,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button
-                    className="rounded-full text-xs h-8"
+                    className="rounded-none text-xs h-8"
                     disabled={cancellingId === sub.id}
                     onClick={() => void handleCancel(sub.id)}
                     size="sm"
@@ -259,7 +259,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
                       : `Cancel & Save ${formatInr(sub.monthlyInr)}/mo`}
                   </Button>
                   <button
-                    className="rounded-full p-1 text-muted-foreground hover:bg-muted transition-colors"
+                    className="rounded-none p-1 text-muted-foreground hover:bg-muted transition-colors"
                     onClick={() => dismiss(`unused-${sub.id}`)}
                     title="Dismiss"
                     type="button"
@@ -275,7 +275,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 2 — Duplicate Tools */}
       {duplicates.length > 0 && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardHeader>
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               SECTION 2
@@ -288,14 +288,14 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
           <CardContent className="space-y-4">
             {duplicates.map((dup) => (
               <div
-                className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4"
+                className="rounded-none border border-amber-500/30 bg-amber-500/10 p-4"
                 key={dup.category}
               >
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Copy className="h-4 w-4 text-amber-600" />
                     <span className="font-medium text-sm">{dup.category}</span>
-                    <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs" variant="outline">
+                    <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-xs rounded-none" variant="outline">
                       {dup.subscriptions.length} tools
                     </Badge>
                   </div>
@@ -304,7 +304,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
                       {formatInr(dup.combinedMonthlyInr)}/mo combined
                     </span>
                     <button
-                      className="rounded-full p-1 text-muted-foreground hover:bg-muted transition-colors"
+                      className="rounded-none p-1 text-muted-foreground hover:bg-muted transition-colors"
                       onClick={() => dismiss(`dup-${dup.category}`)}
                       type="button"
                     >
@@ -319,12 +319,12 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {dup.subscriptions.map((s) => (
-                    <Badge key={s.id} variant="outline" className="text-xs">
+                    <Badge key={s.id} variant="outline" className="text-xs rounded-none">
                       {s.name} · {formatInr(s.monthlyInr)}/mo
                     </Badge>
                   ))}
                 </div>
-                <Button asChild className="mt-3 rounded-full" size="sm" variant="outline">
+                <Button asChild className="mt-3 rounded-none" size="sm" variant="outline">
                   <a href="/dashboard/subscriptions">Review Duplicates</a>
                 </Button>
               </div>
@@ -335,7 +335,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 3 — Monthly Spend Trend */}
       {subscriptions.length > 0 && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardHeader>
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               SECTION 3
@@ -377,7 +377,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 4 — Renewal Risk */}
       {risks.length > 0 && (
-        <Card className="rounded-3xl border-border/70">
+        <Card className="rounded-none border-border/70">
           <CardHeader>
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               SECTION 4
@@ -390,7 +390,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
           <CardContent className="space-y-3">
             {risks.map((risk) => (
               <div
-                className="flex items-center justify-between gap-4 rounded-2xl border border-red-200 bg-red-50/40 px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-none border border-red-500/30 bg-red-500/10 px-4 py-3"
                 key={risk.id}
               >
                 <div className="flex items-start gap-3">
@@ -407,11 +407,11 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-xs font-medium text-red-700">
+                  <span className="text-xs font-medium text-red-500">
                     {formatInr(risk.monthlyInr)}/mo
                   </span>
                   <button
-                    className="rounded-full p-1 text-muted-foreground hover:bg-muted transition-colors"
+                    className="rounded-none p-1 text-muted-foreground hover:bg-muted transition-colors"
                     onClick={() => dismiss(`risk-${risk.id}`)}
                     type="button"
                   >

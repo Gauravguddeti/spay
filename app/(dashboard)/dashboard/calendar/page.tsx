@@ -24,7 +24,7 @@ function formatInr(amount: string) {
 }
 
 function urgencyClass(daysLeft: number): string {
-  if (daysLeft <= 3) return "bg-red-100 text-red-800 border-red-200"
+  if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
   if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
   return "bg-emerald-100 text-emerald-800 border-emerald-200"
 }
@@ -58,7 +58,7 @@ export default async function CalendarPage() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
         <p className="text-xs font-mono text-muted-foreground">RENEWAL CALENDAR</p>
         <h1 className="mt-2 font-serif text-3xl">Upcoming Renewals</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ export default async function CalendarPage() {
         />
 
         {/* Renewal list */}
-        <div className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm">
+        <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm">
           <p className="mb-4 text-xs font-mono text-muted-foreground">NEXT 30 DAYS</p>
 
           {renewals.length === 0 ? (
@@ -96,7 +96,7 @@ export default async function CalendarPage() {
 
                 return (
                   <Card
-                    className={`rounded-2xl border-border/70 ${daysLeft <= 7 ? "border-red-200 bg-red-50/40" : ""}`}
+                    className={`rounded-none border-border/70 ${daysLeft <= 7 ? "border-red-200 bg-red-50/40" : ""}`}
                     key={renewal.id}
                   >
                     <CardHeader className="pb-2 pt-4 px-4">

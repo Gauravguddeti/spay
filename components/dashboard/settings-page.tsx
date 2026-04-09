@@ -180,23 +180,23 @@ export function SettingsPageClient() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
         <p className="text-xs font-mono text-muted-foreground">SETTINGS</p>
         <h1 className="mt-2 font-serif text-3xl">Settings</h1>
       </div>
 
       <Tabs defaultValue="profile">
-        <TabsList className="rounded-full bg-secondary">
-          <TabsTrigger className="rounded-full text-sm" value="profile">Profile</TabsTrigger>
-          <TabsTrigger className="rounded-full text-sm" value="organization">Organization</TabsTrigger>
-          <TabsTrigger className="rounded-full text-sm" value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger className="rounded-full text-sm" value="danger">Danger Zone</TabsTrigger>
+        <TabsList className="rounded-none bg-secondary">
+          <TabsTrigger className="rounded-none text-sm" value="profile">Profile</TabsTrigger>
+          <TabsTrigger className="rounded-none text-sm" value="organization">Organization</TabsTrigger>
+          <TabsTrigger className="rounded-none text-sm" value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger className="rounded-none text-sm" value="danger">Danger Zone</TabsTrigger>
         </TabsList>
 
         {/* ── TAB 1: Profile ── */}
         <TabsContent className="mt-4 space-y-4" value="profile">
           {/* Display name */}
-          <Card className="rounded-3xl border-border/70">
+          <Card className="rounded-none border-border/70">
             <CardHeader>
               <CardTitle className="text-lg">Display Name</CardTitle>
               <CardDescription>Your name shown across the dashboard</CardDescription>
@@ -222,7 +222,7 @@ export function SettingsPageClient() {
                 <p className="text-xs text-muted-foreground">Email cannot be changed</p>
               </div>
               <Button
-                className="rounded-full"
+                className="rounded-none"
                 disabled={savingName}
                 onClick={handleSaveName}
               >
@@ -233,7 +233,7 @@ export function SettingsPageClient() {
           </Card>
 
           {/* Change password */}
-          <Card className="rounded-3xl border-border/70">
+          <Card className="rounded-none border-border/70">
             <CardHeader>
               <CardTitle className="text-lg">Change Password</CardTitle>
               <CardDescription>Use at least 8 characters</CardDescription>
@@ -278,7 +278,7 @@ export function SettingsPageClient() {
                 />
               </div>
               <Button
-                className="rounded-full"
+                className="rounded-none"
                 disabled={savingPassword}
                 onClick={handleChangePassword}
               >
@@ -291,14 +291,14 @@ export function SettingsPageClient() {
 
         {/* ── TAB 2: Organization ── */}
         <TabsContent className="mt-4" value="organization">
-          <Card className="rounded-3xl border-border/70">
+          <Card className="rounded-none border-border/70">
             <CardHeader>
               <CardTitle className="text-lg">Organization</CardTitle>
               <CardDescription>Manage your workspace details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {loading ? (
-                <div className="h-10 w-48 animate-pulse rounded-lg bg-muted" />
+                <div className="h-10 w-48 animate-pulse rounded-none bg-muted" />
               ) : (
                 <>
                   <div className="space-y-2">
@@ -325,7 +325,7 @@ export function SettingsPageClient() {
                     </div>
                   )}
                   <Button
-                    className="rounded-full"
+                    className="rounded-none"
                     disabled={savingOrg}
                     onClick={handleSaveOrg}
                   >
@@ -340,7 +340,7 @@ export function SettingsPageClient() {
 
         {/* ── TAB 3: Notifications ── */}
         <TabsContent className="mt-4" value="notifications">
-          <Card className="rounded-3xl border-border/70">
+          <Card className="rounded-none border-border/70">
             <CardHeader>
               <CardTitle className="text-lg">Notifications</CardTitle>
               <CardDescription>
@@ -351,7 +351,7 @@ export function SettingsPageClient() {
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-8 w-64 animate-pulse rounded-lg bg-muted" />
+                    <div key={i} className="h-8 w-64 animate-pulse rounded-none bg-muted" />
                   ))}
                 </div>
               ) : (
@@ -399,7 +399,7 @@ export function SettingsPageClient() {
                   </div>
 
                   <Button
-                    className="rounded-full"
+                    className="rounded-none"
                     disabled={savingNotifs}
                     onClick={handleSaveNotifs}
                   >
@@ -419,7 +419,7 @@ export function SettingsPageClient() {
         {/* ── TAB 4: Danger Zone ── */}
         <TabsContent className="mt-4 space-y-4" value="danger">
           {/* Delete all subscriptions */}
-          <Card className="rounded-3xl border-red-200 bg-red-50/30">
+          <Card className="rounded-none border-red-200 bg-red-50/30">
             <CardHeader>
               <CardTitle className="text-lg text-red-700">Delete All Subscriptions</CardTitle>
               <CardDescription>
@@ -430,7 +430,7 @@ export function SettingsPageClient() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
-                    className="rounded-full"
+                    className="rounded-none"
                     disabled={deletingSubscriptions}
                     variant="destructive"
                   >
@@ -438,7 +438,7 @@ export function SettingsPageClient() {
                     {deletingSubscriptions ? "Deleting..." : "Delete All Subscriptions"}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-3xl border-border/70 bg-card">
+                <AlertDialogContent className="rounded-none border-border/70 bg-card">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete all subscriptions?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -461,7 +461,7 @@ export function SettingsPageClient() {
           </Card>
 
           {/* Delete account */}
-          <Card className="rounded-3xl border-red-200 bg-red-50/30">
+          <Card className="rounded-none border-red-200 bg-red-50/30">
             <CardHeader>
               <CardTitle className="text-lg text-red-700">Delete Account</CardTitle>
               <CardDescription>
@@ -472,7 +472,7 @@ export function SettingsPageClient() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
-                    className="rounded-full"
+                    className="rounded-none"
                     disabled={deletingAccount}
                     variant="destructive"
                   >
@@ -480,7 +480,7 @@ export function SettingsPageClient() {
                     {deletingAccount ? "Deleting..." : "Delete Account"}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-3xl border-border/70 bg-card">
+                <AlertDialogContent className="rounded-none border-border/70 bg-card">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                     <AlertDialogDescription>
