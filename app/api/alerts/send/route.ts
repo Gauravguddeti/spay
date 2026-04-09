@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         ),
       )
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://spendly.vercel.app"
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://spay.vercel.app"
     let sent = 0
     let failed = 0
 

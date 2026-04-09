@@ -81,7 +81,7 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        New to Spendly?{" "}
+        New to SPAY?{" "}
         <Link className="font-medium text-primary hover:underline" href="/signup">
           Sign up
         </Link>

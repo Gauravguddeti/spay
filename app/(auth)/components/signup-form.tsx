@@ -134,7 +134,7 @@ export function SignupForm() {
       </div>
 
       <Button className="w-full rounded-full" disabled={isLoading} type="submit">
-        {isLoading ? "Creating account..." : "Create Spendly Account"}
+        {isLoading ? "Creating account..." : "Create SPAY Account"}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
