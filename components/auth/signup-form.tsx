@@ -1,0 +1,148 @@
+"use client"
+
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { signIn } from "next-auth/react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+type SignupPayload = {
+  name: string
+  email: string
+  password: string
+  organizationName: string
+}
+
+export function SignupForm() {
+  const router = useRouter()
+  const [payload, setPayload] = useState<SignupPayload>({
+    name: "",
+    email: "",
+    password: "",
+    organizationName: "",
+  })
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  function updateField<K extends keyof SignupPayload>(key: K, value: SignupPayload[K]) {
+    setPayload((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setIsLoading(true)
+
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const result = (await response.json()) as { error?: string }
+
+    if (!response.ok) {
+      setIsLoading(false)
+      setError(result.error ?? "Could not create account")
+      return
+    }
+
+    const signInResult = await signIn("credentials", {
+      email: payload.email,
+      password: payload.password,
+      redirect: false,
+    })
+
+    setIsLoading(false)
+
+    if (signInResult?.error) {
+      router.push("/login")
+      return
+    }
+
+    router.push("/dashboard")
+    router.refresh()
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      {error ? (
+        <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="space-y-2">
+        <Label htmlFor="name">Full Name</Label>
+        <Input
+          id="name"
+          name="name"
+          required
+          minLength={2}
+          value={payload.name}
+          onChange={(event) => updateField("name", event.target.value)}
+          placeholder="Aarav Malhotra"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="organizationName">Organization Name</Label>
+        <Input
+          id="organizationName"
+          name="organizationName"
+          required
+          minLength={2}
+          value={payload.organizationName}
+          onChange={(event) => updateField("organizationName", event.target.value)}
+          placeholder="Acme Labs Pvt Ltd"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Work Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={payload.email}
+          onChange={(event) => updateField("email", event.target.value)}
+          placeholder="founder@acmelabs.in"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={payload.password}
+          onChange={(event) => updateField("password", event.target.value)}
+          placeholder="At least 8 characters"
+        />
+      </div>
+
+      <Button className="w-full rounded-full" disabled={isLoading} type="submit">
+        {isLoading ? "Creating account..." : "Create Spendly Account"}
+      </Button>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link className="font-medium text-primary hover:underline" href="/login">
+          Sign in
+        </Link>
+      </p>
+    </form>
+  )
+}
