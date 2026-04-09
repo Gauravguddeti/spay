@@ -12,10 +12,10 @@ const syne = Syne({ subsets: ["latin"], variable: "--font-syne" })
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "Spendly - Subscription Spend Control for Startup Teams",
+  title: "SPAY - Subscription Spend Control for Startup Teams",
   description:
     "Track SaaS subscriptions, monitor renewals, and reduce unnecessary software spend with one practical dashboard.",
-  generator: "Spendly",
+  generator: "SPAY",
 }
 
 export default function RootLayout({
@@ -24,8 +24,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${dmSans.variable} ${playfair.variable} ${jetbrainsMono.variable} ${syne.variable} ${inter.variable} font-sans antialiased`}
       >
         {children}

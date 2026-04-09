@@ -197,11 +197,12 @@
   }
 }
 
-/* Template landing page styles (scoped) */
+/* Template landing page styles (scoped to .template-landing so dashboard is unaffected) */
 .template-landing {
   --landing-bg: #0e0e0e;
   --landing-fg: #ffffff;
-  --landing-accent: #ff3e00;
+  /* Default accent; override per-page via inline style e.g. style={{ "--landing-accent": "#5a9078" }} */
+  --landing-accent: #5a9078;
   --landing-gray: #222222;
   --landing-syne: var(--font-syne), "Syne", sans-serif;
   --landing-inter: var(--font-inter), "Inter", sans-serif;
@@ -210,10 +211,27 @@
   font-family: var(--landing-inter);
   overflow-x: hidden;
   line-height: 1.4;
+  /* Crosshair cursor only on the landing page */
+  cursor: crosshair;
 }
 
 .template-landing * {
   box-sizing: border-box;
+  cursor: crosshair;
+}
+
+/* Scrollbar — scoped to landing page only */
+.template-landing::-webkit-scrollbar,
+html:has(.template-landing)::-webkit-scrollbar {
+  width: 5px;
+}
+.template-landing::-webkit-scrollbar-track,
+html:has(.template-landing)::-webkit-scrollbar-track {
+  background: var(--landing-bg, #0e0e0e);
+}
+.template-landing::-webkit-scrollbar-thumb,
+html:has(.template-landing)::-webkit-scrollbar-thumb {
+  background: var(--landing-accent);
 }
 
 .template-landing .huge-type,
@@ -484,11 +502,14 @@
 }
 
 .template-landing .footer-cta {
-  font-size: 12rem;
-  line-height: 0.8;
+  /* clamp(min, preferred, max) — "START FREE" at ~10 chars fits within 1200px container at 9vw */
+  font-size: clamp(3.5rem, 9vw, 10.5rem);
+  line-height: 0.85;
   font-family: var(--landing-syne);
   text-align: center;
-  padding: 100px 0;
+  padding: 80px 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .template-landing .footer-cta a {
@@ -519,11 +540,14 @@
   position: fixed;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(255, 62, 0, 0.15) 0%, rgba(14, 14, 14, 0) 70%);
+  background: radial-gradient(circle, rgba(90, 144, 120, 0.25) 0%, rgba(14, 14, 14, 0) 70%);
   border-radius: 50%;
   pointer-events: none;
-  z-index: -1;
-  transition: transform 0.1s ease-out;
+  /* z-index: -1 made it invisible behind the dark page background — use a high value instead */
+  z-index: 500;
+  filter: blur(40px);
+  transition: transform 0.12s ease-out;
+  mix-blend-mode: screen;
 }
 
 .template-landing .reveal-text {

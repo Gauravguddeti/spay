@@ -17,10 +17,10 @@ const credentialsSchema = z.object({
 
 const TEMP_LOCAL_TEST_CREDENTIALS = {
   email: TEMP_LOCAL_TEST_EMAIL,
-  password: "Spendly123!",
+  password: "SPAY123!",
   user: {
     id: TEMP_LOCAL_TEST_USER_ID,
-    name: "Spendly Local Test",
+    name: "SPAY Local Test",
     email: TEMP_LOCAL_TEST_EMAIL,
     image: null,
   },
@@ -82,8 +82,8 @@ providers.push(
       if (process.env.NODE_ENV === "development") {
         const devEmail = process.env.DEV_TEST_EMAIL
         const devPassword = process.env.DEV_TEST_PASSWORD
-        const devName = process.env.DEV_TEST_NAME ?? "Spendly Test User"
-        const devOrgName = process.env.DEV_TEST_ORG_NAME ?? "Spendly Test Org"
+        const devName = process.env.DEV_TEST_NAME ?? "SPAY Test User"
+        const devOrgName = process.env.DEV_TEST_ORG_NAME ?? "SPAY Test Org"
 
         if (
           devEmail &&

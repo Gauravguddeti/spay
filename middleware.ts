@@ -18,7 +18,7 @@ const ratelimit = hasUpstashEnv
       redis: Redis.fromEnv(),
       limiter: Ratelimit.slidingWindow(10, "60 s"),
       analytics: false,
-      prefix: "spendly:ratelimit",
+      prefix: "spay:ratelimit",
     })
   : null
 
