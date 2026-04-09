@@ -232,7 +232,7 @@ function ChartTooltipContent({
                         {itemConfig?.label || item.name}
                       </span>
                     </div>
-                    {item.value && (
+                    {item.value !== undefined && item.value !== null && (
                       <span className="text-foreground font-mono font-medium tabular-nums">
                         {item.value.toLocaleString()}
                       </span>
@@ -278,10 +278,15 @@ function ChartLegendContent({
       {payload.map((item) => {
         const key = `${nameKey || item.dataKey || 'value'}`
         const itemConfig = getPayloadConfigFromPayload(config, item, key)
+        const legendLabel =
+          itemConfig?.label ??
+          (typeof item.value === 'string' || typeof item.value === 'number'
+            ? String(item.value)
+            : key)
 
         return (
           <div
-            key={item.value}
+            key={`${item.dataKey ?? 'item'}-${item.color ?? ''}`}
             className="[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
           >
             {itemConfig?.icon && !hideIcon ? (
@@ -294,7 +299,7 @@ function ChartLegendContent({
                 }}
               />
             )}
-            {itemConfig?.label}
+            {legendLabel}
           </div>
         )
       })}

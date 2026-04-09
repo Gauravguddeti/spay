@@ -19,7 +19,7 @@
   --accent: #c5d4c0;
   --accent-foreground: #1a1a1a;
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: #d1d5db;
   --input: #d1d5db;
   --ring: #2d4a3e;
@@ -214,6 +214,11 @@
 
 .template-landing * {
   box-sizing: border-box;
+}
+
+.template-landing .huge-type,
+.template-landing .hero-img,
+.template-landing .floating-label {
   cursor: crosshair;
 }
 
@@ -653,5 +658,25 @@
 
   .template-landing .blob {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .template-landing .parallax-text,
+  .template-landing .floating-label,
+  .template-landing .hero-img,
+  .template-landing .blob,
+  .marquee-inner {
+    animation: none !important;
+    transform: none !important;
   }
 }

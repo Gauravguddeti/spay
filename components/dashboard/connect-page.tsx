@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { signIn, useSession } from "next-auth/react"
 import { CheckCircle2, Circle, Loader2, Mail, PlugZap } from "lucide-react"
 
@@ -42,14 +42,7 @@ export function ConnectPageClient() {
   const [importing, setImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
 
-  useEffect(() => {
-    if (isGmailConnected && detected === null && !scanning) {
-      void handleScan()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGmailConnected])
-
-  async function handleScan() {
+  const handleScan = useCallback(async () => {
     setScanning(true)
     setScanError(null)
     try {
@@ -77,7 +70,13 @@ export function ConnectPageClient() {
     } finally {
       setScanning(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (isGmailConnected && detected === null && !scanning) {
+      void handleScan()
+    }
+  }, [detected, handleScan, isGmailConnected, scanning])
 
   function toggleVendor(key: string) {
     setSelected((prev) => {
