@@ -1,10 +1,10 @@
-# Spendly
+# SPAY
 
-Spendly is a SaaS subscription spend control app for startup teams. It combines manual tracking with Gmail-assisted detection, then sends renewal reminders over WhatsApp so teams can reduce surprise renewals and identify waste.
+Spay is a SaaS subscription spend control app for startup teams. It combines manual tracking with Gmail-assisted detection, then sends renewal reminders over WhatsApp so teams can reduce surprise renewals and identify waste.
 
 ## Product Overview
 
-Spendly helps teams answer three questions quickly:
+Spay helps teams answer three questions quickly:
 
 - What are we paying for every month?
 - What is renewing soon?
