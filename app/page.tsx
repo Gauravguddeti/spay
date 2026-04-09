@@ -161,8 +161,8 @@ export default function LandingPage() {
             </div>
             <div className="project-media">
               <img
-                src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000"
-                alt="Track subscriptions"
+                src="https://images.pexels.com/photos/20206391/pexels-photo-20206391.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                alt="Analytics dashboard tracking software subscriptions"
                 className="project-image"
               />
               <div className="floating-label huge-type outline-text label-right">SPEND</div>
@@ -183,8 +183,8 @@ export default function LandingPage() {
             </div>
             <div className="project-media">
               <img
-                src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=1000"
-                alt="Gmail detection"
+                src="https://images.pexels.com/photos/19435870/pexels-photo-19435870.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                alt="Phone and laptop used to review incoming email tools"
                 className="project-image"
               />
               <div className="floating-label huge-type outline-text label-left">INBOX</div>
@@ -205,8 +205,8 @@ export default function LandingPage() {
             </div>
             <div className="project-media">
               <img
-                src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=1000"
-                alt="WhatsApp alerts"
+                src="https://images.pexels.com/photos/32944547/pexels-photo-32944547.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                alt="Smartphone showing multiple notification alerts"
                 className="project-image"
               />
               <div className="floating-label huge-type outline-text label-right">ALERT</div>
@@ -221,16 +221,16 @@ export default function LandingPage() {
         >          <div className="container composition">
             <div className="comp-item-1">
               <img
-                src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=600"
+                src="https://images.pexels.com/photos/6285130/pexels-photo-6285130.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 className="comp-image"
-                alt="Connect your stack"
+                alt="Team discussing business charts in a strategy meeting"
               />
             </div>
             <div className="comp-item-2">
               <img
-                src="https://images.unsplash.com/photo-1559028006-448665bd7c7f?auto=format&fit=crop&q=80&w=800"
+                src="https://images.pexels.com/photos/12969403/pexels-photo-12969403.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 className="comp-image"
-                alt="Review and import"
+                alt="Laptop with spend analytics used to review subscriptions"
               />
             </div>
             <div className="comp-item-3">
@@ -248,9 +248,9 @@ export default function LandingPage() {
             </div>
             <div className="comp-item-4">
               <img
-                src="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?auto=format&fit=crop&q=80&w=500"
+                src="https://images.pexels.com/photos/9956765/pexels-photo-9956765.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 className="comp-image"
-                alt="Control spend"
+                alt="Phone displaying heads-up notifications for billing reminders"
               />
             </div>
           </div>
