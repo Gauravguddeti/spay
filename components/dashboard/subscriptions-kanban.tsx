@@ -9,7 +9,6 @@ import { ChevronDown, Plus, FileText, Mail, Download } from "lucide-react"
 import { KanbanBoard, type KanbanColumn } from "@/components/ui/trello-kanban-board"
 import { AddSubscriptionModal, type SubscriptionFormValues } from "@/components/dashboard/AddSubscriptionModal"
 import { CancellationDialog } from "@/components/subscriptions/CancellationDialog"
-import { QuickAddButton } from "@/components/ui/QuickAddButton"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -264,9 +263,6 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
           cancelled: "bg-red-500",
         }}
       />
-
-      {/* Floating FAB */}
-      <QuickAddButton onClick={openAddModal} />
 
       {/* Add / Edit Modal */}
       <AddSubscriptionModal

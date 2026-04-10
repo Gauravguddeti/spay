@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, FileText, Mail, Pencil, ArrowRight, Bell } from "lucide-react"
+import { Check, FileText, Mail, Pencil, ArrowRight, Bell, X } from "lucide-react"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,14 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-      <div className="w-full max-w-lg mx-4 rounded-none border border-border/70 bg-card shadow-2xl">
+      <div className="w-full max-w-lg mx-4 rounded-none border border-border/70 bg-card shadow-2xl relative">
+        <button
+          onClick={completeOnboarding}
+          className="absolute right-4 top-4 text-muted-foreground hover:text-foreground transition-colors p-1"
+          title="Skip Onboarding"
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Progress bar */}
         <div className="flex border-b border-border/70">
           {Array.from({ length: STEPS }).map((_, i) => (

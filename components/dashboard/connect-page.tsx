@@ -32,9 +32,8 @@ function confidenceClass(score: number): string {
   return "bg-red-500/20 text-red-800 border-red-200"
 }
 
-export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: boolean }) {
-  const { data: session } = useSession()
-  const isGmailConnected = Boolean((session?.user as { accessToken?: string } | undefined)?.accessToken)
+export function ConnectPageClient({ gmailEnabled = true, initialConnected = false }: { gmailEnabled?: boolean, initialConnected?: boolean }) {
+  const [isGmailConnected, setIsGmailConnected] = useState(initialConnected)
 
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -55,8 +54,9 @@ export function ConnectPageClient({ gmailEnabled = true }: { gmailEnabled?: bool
       }
 
       if (!res.ok) {
-        if (data.error === "GMAIL_AUTH_EXPIRED") {
-          toast.error("Your Gmail connection has expired. Please reconnect.")
+        if (data.error === "GMAIL_AUTH_EXPIRED" || data.error === "GMAIL_NOT_CONNECTED") {
+          toast.error("Your Gmail connection has expired or is missing. Please reconnect.")
+          setIsGmailConnected(false)
         } else {
           toast.error(data.message ?? data.error ?? "Scan failed")
         }
