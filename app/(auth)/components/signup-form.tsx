@@ -17,6 +17,8 @@ type SignupPayload = {
   organizationName: string
 }
 
+const PENDING_ONBOARDING_KEY = "spay.pending-onboarding"
+
 export function SignupForm() {
   const router = useRouter()
   const [payload, setPayload] = useState<SignupPayload>({
@@ -58,15 +60,30 @@ export function SignupForm() {
       body: JSON.stringify({ organizationName: payload.organizationName }),
     })
 
-    if (!bootstrapResponse.ok) {
+    if (bootstrapResponse.ok) {
       setIsLoading(false)
-      setError("Account created but onboarding setup failed. Please try again after login.")
+      router.push("/dashboard")
+      router.refresh()
+      return
+    }
+
+    // Neon can require email verification before creating a logged-in session.
+    // Persist onboarding intent and complete it right after first successful login.
+    if (bootstrapResponse.status === 401) {
+      localStorage.setItem(
+        PENDING_ONBOARDING_KEY,
+        JSON.stringify({
+          email: payload.email.trim().toLowerCase(),
+          organizationName: payload.organizationName.trim(),
+        }),
+      )
+      setIsLoading(false)
+      router.push(`/login?email=${encodeURIComponent(payload.email)}&onboarding=pending`)
       return
     }
 
     setIsLoading(false)
-    router.push("/dashboard")
-    router.refresh()
+    setError("Account created but onboarding setup failed. Please sign in and try again.")
   }
 
   return (

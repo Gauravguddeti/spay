@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { authClient } from "@/lib/auth/client"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -10,12 +10,60 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+const PENDING_ONBOARDING_KEY = "spay.pending-onboarding"
+
 export function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const prefillEmail = params.get("email")
+    const onboardingPending = params.get("onboarding")
+
+    if (prefillEmail) {
+      setEmail(prefillEmail)
+    }
+
+    if (onboardingPending === "pending") {
+      setError("Account created. Please sign in once to finish onboarding setup.")
+    }
+  }, [])
+
+  async function tryCompletePendingOnboarding(currentEmail: string) {
+    const raw = localStorage.getItem(PENDING_ONBOARDING_KEY)
+    if (!raw) {
+      return
+    }
+
+    try {
+      const pending = JSON.parse(raw) as { email?: string; organizationName?: string }
+      const pendingEmail = pending.email?.trim().toLowerCase()
+      const normalizedCurrentEmail = currentEmail.trim().toLowerCase()
+      const organizationName = pending.organizationName?.trim()
+
+      if (!pendingEmail || pendingEmail !== normalizedCurrentEmail || !organizationName) {
+        return
+      }
+
+      const bootstrapResponse = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationName }),
+      })
+
+      if (bootstrapResponse.ok) {
+        localStorage.removeItem(PENDING_ONBOARDING_KEY)
+      }
+    } catch {
+      // Ignore malformed localStorage payloads; regular login should continue.
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -28,6 +76,7 @@ export function LoginForm() {
     })
 
     if (!signInResult.error) {
+      await tryCompletePendingOnboarding(email)
       setIsLoading(false)
       router.push("/dashboard")
       router.refresh()
@@ -45,14 +94,19 @@ export function LoginForm() {
 
     if (!legacyResponse.ok) {
       setIsLoading(false)
-      setError("Incorrect email or password")
+      if (legacyResponse.status === 429) {
+        setError("Too many attempts. Please wait and try again.")
+        return
+      }
+
+      setError(signInResult.error.message ?? "Incorrect email or password")
       return
     }
 
     const legacyData = (await legacyResponse.json()) as { valid?: boolean; name?: string }
     if (!legacyData.valid) {
       setIsLoading(false)
-      setError("Incorrect email or password")
+      setError(signInResult.error.message ?? "Incorrect email or password")
       return
     }
 
@@ -68,15 +122,17 @@ export function LoginForm() {
       setIsLoading(false)
 
       if (retry.error) {
-        setError("Account migration failed. Please use Sign up once, then login.")
+        setError(retry.error.message ?? "Account migration failed. Please use Sign up once, then login.")
         return
       }
 
+      await tryCompletePendingOnboarding(email)
       router.push("/dashboard")
       router.refresh()
       return
     }
 
+    await tryCompletePendingOnboarding(email)
     setIsLoading(false)
     router.push("/dashboard")
     router.refresh()
