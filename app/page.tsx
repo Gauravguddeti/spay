@@ -2,6 +2,7 @@
 "use client"
 
 import { useEffect } from "react"
+import Image from "next/image"
 import Link from "next/link"
 
 export default function LandingPage() {
@@ -95,11 +96,14 @@ export default function LandingPage() {
       <main>
         {/* ─── HERO ────────────────────────────────────────────────────────── */}
         <section id="hero">
-          <img
+          <Image
             src="/hero-abstract.png"
             alt="Abstract light form"
             className="hero-img"
             id="hero-img"
+            width={1800}
+            height={1200}
+            priority
           />
           <div className="hero-title-container container">
             <span className="huge-type parallax-text" data-speed="-2">
@@ -153,10 +157,13 @@ export default function LandingPage() {
               <p>POTENTIAL SAVINGS: UP TO 30%</p>
             </div>
             <div className="project-media">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/20206391/pexels-photo-20206391.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 alt="Analytics dashboard tracking software subscriptions"
                 className="project-image"
+                width={1200}
+                height={800}
+                unoptimized
               />
               <div className="floating-label huge-type outline-text label-right">SPEND</div>
             </div>
@@ -175,10 +182,13 @@ export default function LandingPage() {
               <p>20+ VENDORS DETECTED AUTOMATICALLY</p>
             </div>
             <div className="project-media">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/19435870/pexels-photo-19435870.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 alt="Phone and laptop used to review incoming email tools"
                 className="project-image"
+                width={1200}
+                height={800}
+                unoptimized
               />
               <div className="floating-label huge-type outline-text label-left">INBOX</div>
             </div>
@@ -197,10 +207,13 @@ export default function LandingPage() {
               <p>NEVER SURPRISED BY A CHARGE AGAIN</p>
             </div>
             <div className="project-media">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/32944547/pexels-photo-32944547.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 alt="Smartphone showing multiple notification alerts"
                 className="project-image"
+                width={1200}
+                height={800}
+                unoptimized
               />
               <div className="floating-label huge-type outline-text label-right">ALERT</div>
             </div>
@@ -213,17 +226,23 @@ export default function LandingPage() {
           style={{ display: "block", padding: "100px 0", overflow: "hidden", minHeight: "auto" }}
         >          <div className="container composition">
             <div className="comp-item-1">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/6285130/pexels-photo-6285130.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 className="comp-image"
                 alt="Team discussing business charts in a strategy meeting"
+                width={1200}
+                height={900}
+                unoptimized
               />
             </div>
             <div className="comp-item-2">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/12969403/pexels-photo-12969403.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 className="comp-image"
                 alt="Laptop with spend analytics used to review subscriptions"
+                width={1200}
+                height={900}
+                unoptimized
               />
             </div>
             <div className="comp-item-3">
@@ -240,10 +259,13 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="comp-item-4">
-              <img
+              <Image
                 src="https://images.pexels.com/photos/9956765/pexels-photo-9956765.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 className="comp-image"
                 alt="Phone displaying heads-up notifications for billing reminders"
+                width={1200}
+                height={900}
+                unoptimized
               />
             </div>
           </div>
