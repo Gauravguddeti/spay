@@ -12,7 +12,7 @@
 			"isBackground": true
 		},
 		{
-			"label": "Spendly Dev Server",
+			"label": "SPAY Dev Server",
 			"type": "shell",
 			"command": "npm run dev",
 			"isBackground": true,
