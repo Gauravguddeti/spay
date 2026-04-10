@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { authClient } from "@/lib/auth/client"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -22,15 +22,14 @@ export function LoginForm() {
     setIsLoading(true)
     setError(null)
 
-    const result = await signIn("credentials", {
+    const { error } = await authClient.signIn.email({
       email,
       password,
-      redirect: false,
     })
 
     setIsLoading(false)
 
-    if (!result || result.error) {
+    if (error) {
       setError("Incorrect email or password")
       return
     }
@@ -78,6 +77,16 @@ export function LoginForm() {
 
       <Button className="w-full rounded-none" disabled={isLoading} type="submit">
         {isLoading ? "Signing in..." : "Sign In"}
+      </Button>
+
+      <Button
+        className="w-full rounded-none"
+        disabled={isLoading}
+        onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" })}
+        type="button"
+        variant="outline"
+      >
+        Continue with Google
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">

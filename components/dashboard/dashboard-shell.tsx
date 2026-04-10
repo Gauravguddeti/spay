@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { signOut } from "next-auth/react"
 import { BarChart3, CalendarClock, CreditCard, FileSearch, FileText, LayoutDashboard, LogOut, Menu, PlugZap, Settings } from "lucide-react"
+import { authClient } from "@/lib/auth/client"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -112,7 +112,10 @@ export function DashboardShell({ children, orgName, userName, userEmail }: Dashb
 
               <Button
                 className="rounded-none"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={async () => {
+                  await authClient.signOut()
+                  window.location.href = "/login"
+                }}
                 size="sm"
                 variant="outline"
               >

@@ -17,10 +17,7 @@ export default async function ConnectPage() {
     isConnected = acc.length > 0
   }
 
-  const gmailEnabled = Boolean(
-    (process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID) &&
-      (process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET),
-  )
+  const gmailEnabled = true
 
   return <ConnectPageClient gmailEnabled={gmailEnabled} initialConnected={isConnected} />
 }

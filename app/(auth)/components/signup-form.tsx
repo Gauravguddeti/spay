@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { authClient } from "@/lib/auth/client"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -37,35 +37,34 @@ export function SignupForm() {
     setError(null)
     setIsLoading(true)
 
-    const response = await fetch("/api/auth/signup", {
+    const signUpResult = await authClient.signUp.email({
+      email: payload.email,
+      name: payload.name,
+      password: payload.password,
+      callbackURL: "/dashboard",
+    })
+
+    if (signUpResult.error) {
+      setIsLoading(false)
+      setError(signUpResult.error.message ?? "Could not create account")
+      return
+    }
+
+    const bootstrapResponse = await fetch("/api/onboarding/complete", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ organizationName: payload.organizationName }),
     })
 
-    const result = (await response.json()) as { error?: string }
-
-    if (!response.ok) {
+    if (!bootstrapResponse.ok) {
       setIsLoading(false)
-      setError(result.error ?? "Could not create account")
+      setError("Account created but onboarding setup failed. Please try again after login.")
       return
     }
-
-    const signInResult = await signIn("credentials", {
-      email: payload.email,
-      password: payload.password,
-      redirect: false,
-    })
 
     setIsLoading(false)
-
-    if (signInResult?.error) {
-      router.push("/login")
-      return
-    }
-
     router.push("/dashboard")
     router.refresh()
   }

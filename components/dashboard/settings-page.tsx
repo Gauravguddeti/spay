@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
 import { Eye, EyeOff, Loader2, Save, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { authClient } from "@/lib/auth/client"
 
 import {
   AlertDialog,
@@ -40,7 +40,8 @@ type OrgData = {
 const DEFAULT_PREFS: AlertPreferences = { days30: true, days7: true, days1: false }
 
 export function SettingsPageClient() {
-  const { data: session } = useSession()
+  const { data: sessionData } = authClient.useSession()
+  const session = sessionData?.user
 
   // ── Profile state ──────────────────────────────────────────────────────────
   const [displayName, setDisplayName] = useState("")
@@ -68,7 +69,7 @@ export function SettingsPageClient() {
   const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => {
-    setDisplayName(session?.user?.name ?? "")
+    setDisplayName(session?.name ?? "")
   }, [session])
 
   useEffect(() => {
@@ -217,7 +218,7 @@ export function SettingsPageClient() {
                   className="max-w-sm"
                   disabled
                   readOnly
-                  value={session?.user?.email ?? ""}
+                  value={session?.email ?? ""}
                 />
                 <p className="text-xs text-muted-foreground">Email cannot be changed</p>
               </div>

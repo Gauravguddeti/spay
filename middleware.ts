@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 
-import { auth } from "@/auth"
+import { neonAuth } from "@/lib/auth/server"
 
 // ---------------------------------------------------------------------------
 // Rate limiter — 10 requests per 60 seconds per IP
@@ -22,7 +22,7 @@ const ratelimit = hasUpstashEnv
     })
   : null
 
-const RATE_LIMITED_PATHS = ["/api/auth", "/api/signup"]
+const RATE_LIMITED_PATHS = ["/api/auth/sign-in", "/api/auth/sign-up"]
 
 async function applyRateLimit(req: NextRequest): Promise<NextResponse | null> {
   if (!ratelimit) {
@@ -43,7 +43,9 @@ async function applyRateLimit(req: NextRequest): Promise<NextResponse | null> {
   return null
 }
 
-export default auth(async (req) => {
+const protectedMiddleware = neonAuth.middleware({ loginUrl: "/login" })
+
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Apply rate limiting to auth and signup API routes
@@ -56,16 +58,13 @@ export default auth(async (req) => {
     }
   }
 
-  // Protect dashboard routes — redirect unauthenticated users to login
   if (pathname.startsWith("/dashboard")) {
-    if (!req.auth) {
-      return NextResponse.redirect(new URL("/login", req.url))
-    }
+    return protectedMiddleware(req)
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/auth/:path*", "/api/signup"],
+  matcher: ["/dashboard/:path*", "/api/auth/:path*"],
 }

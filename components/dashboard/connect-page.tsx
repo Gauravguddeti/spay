@@ -1,9 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { signIn, useSession } from "next-auth/react"
 import { AlertCircle, CheckCircle2, Circle, ExternalLink, Loader2, Mail, PlugZap } from "lucide-react"
 import { toast } from "sonner"
+import { authClient } from "@/lib/auth/client"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -185,7 +185,10 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
               </p>
             </div>
           ) : !isGmailConnected ? (
-            <Button className="rounded-none" onClick={() => signIn("google", { callbackUrl: "/dashboard/connect" })}>
+            <Button
+              className="rounded-none"
+              onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/dashboard/connect" })}
+            >
               <PlugZap className="mr-2 h-4 w-4" />
               Connect Gmail
             </Button>

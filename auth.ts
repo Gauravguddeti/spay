@@ -1,233 +1,88 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import Google from "next-auth/providers/google"
-import { DrizzleAdapter } from "@auth/drizzle-adapter"
-import bcrypt from "bcryptjs"
-import { z } from "zod"
-
 import { db } from "@/lib/db"
-import {
-  createUserWithOrganization,
-  getOrganizationByOwnerId,
-  getUserByEmail,
-} from "@/lib/db/queries/users"
-import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema"
-import { encryptToken } from "@/lib/security/tokenCrypto"
-import { TEMP_LOCAL_TEST_EMAIL, TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
+import { eq } from "drizzle-orm"
 
-const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-})
+import { getOrganizationByOwnerId, getUserByEmail } from "@/lib/db/queries/users"
+import { organizations, users } from "@/lib/db/schema"
+import { neonAuth } from "@/lib/auth/server"
 
-const TEMP_LOCAL_TEST_CREDENTIALS = {
-  email: TEMP_LOCAL_TEST_EMAIL,
-  password: "SPAY123!",
+type CompatSession = {
   user: {
-    id: TEMP_LOCAL_TEST_USER_ID,
-    name: "SPAY Local Test",
-    email: TEMP_LOCAL_TEST_EMAIL,
-    image: null,
-  },
-} as const
-
-// Check both NextAuth naming conventions (AUTH_GOOGLE_ID or GOOGLE_CLIENT_ID)
-const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID
-const googleClientSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET
-
-const hasGoogleOAuthEnv = Boolean(googleClientId && googleClientSecret)
-
-const authSecret =
-  process.env.AUTH_SECRET ??
-  (process.env.NODE_ENV === "development"
-    ? "dev-insecure-auth-secret-change-me"
-    : undefined)
-
-const providers: Array<ReturnType<typeof Google> | ReturnType<typeof Credentials>> = []
-
-if (hasGoogleOAuthEnv) {
-  providers.push(
-    Google({
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-      authorization: {
-        params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/gmail.readonly",
-          // Force refresh token to be returned on every sign-in
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    }),
-  )
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+    orgId: string | null
+  }
 }
 
-providers.push(
-  Credentials({
-    name: "Email and Password",
-    credentials: {
-      email: { label: "Email", type: "email" },
-      password: { label: "Password", type: "password" },
-    },
-    async authorize(rawCredentials) {
-      const parsed = credentialsSchema.safeParse(rawCredentials)
-      if (!parsed.success) {
-        return null
-      }
+async function ensureAppUserAndOrg(authUser: {
+  id: string
+  email: string
+  name?: string | null
+  image?: string | null
+}) {
+  let user = await getUserByEmail(authUser.email)
 
-      // TEMPORARY local bypass so frontend can be tested without DB/user setup.
-      if (
-        parsed.data.email.toLowerCase() === TEMP_LOCAL_TEST_CREDENTIALS.email &&
-        parsed.data.password === TEMP_LOCAL_TEST_CREDENTIALS.password
-      ) {
-        return { ...TEMP_LOCAL_TEST_CREDENTIALS.user }
-      }
+  if (!user) {
+    const [createdUser] = await db
+      .insert(users)
+      .values({
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.name ?? "SPAY User",
+        image: authUser.image ?? null,
+      })
+      .returning()
+    user = createdUser
+  } else if ((user.name ?? "") !== (authUser.name ?? "") || (user.image ?? null) !== (authUser.image ?? null)) {
+    const [updated] = await db
+      .update(users)
+      .set({
+        name: authUser.name ?? user.name,
+        image: authUser.image ?? user.image,
+      })
+      .where(eq(users.id, user.id))
+      .returning()
+    user = updated ?? user
+  }
 
-      // DEV-ONLY: auto-provision a test user from environment variables.
-      // Set DEV_TEST_EMAIL and DEV_TEST_PASSWORD in .env.local to enable.
-      if (process.env.NODE_ENV === "development") {
-        const devEmail = process.env.DEV_TEST_EMAIL
-        const devPassword = process.env.DEV_TEST_PASSWORD
-        const devName = process.env.DEV_TEST_NAME ?? "SPAY Test User"
-        const devOrgName = process.env.DEV_TEST_ORG_NAME ?? "SPAY Test Org"
+  let organization = await getOrganizationByOwnerId(user.id)
+  if (!organization) {
+    const [createdOrg] = await db
+      .insert(organizations)
+      .values({
+        ownerId: user.id,
+        name: "My Organization",
+      })
+      .returning()
+    organization = createdOrg
+  }
 
-        if (
-          devEmail &&
-          devPassword &&
-          parsed.data.email.toLowerCase() === devEmail.toLowerCase() &&
-          parsed.data.password === devPassword
-        ) {
-          let testUser = await getUserByEmail(devEmail)
-
-          if (!testUser) {
-            const passwordHash = await bcrypt.hash(devPassword, 12)
-            const created = await createUserWithOrganization({
-              name: devName,
-              email: devEmail,
-              passwordHash,
-              organizationName: devOrgName,
-            })
-            testUser = created.user
-          }
-
-          return {
-            id: testUser.id,
-            name: testUser.name,
-            email: testUser.email,
-            image: testUser.image,
-          }
-        }
-      }
-
-      const existingUser = await getUserByEmail(parsed.data.email)
-      if (!existingUser || !existingUser.password) {
-        return null
-      }
-
-      const isValidPassword = await bcrypt.compare(
-        parsed.data.password,
-        existingUser.password,
-      )
-
-      if (!isValidPassword) {
-        return null
-      }
-
-      return {
-        id: existingUser.id,
-        name: existingUser.name,
-        email: existingUser.email,
-        image: existingUser.image,
-      }
-    },
-  }),
-)
-
-const drizzleAdapter = DrizzleAdapter(db, {
-  usersTable: users,
-  accountsTable: accounts,
-  sessionsTable: sessions,
-  verificationTokensTable: verificationTokens,
-})
-
-type LinkAccountInput = Parameters<NonNullable<typeof drizzleAdapter.linkAccount>>[0]
-
-const adapter = {
-  ...drizzleAdapter,
-  async linkAccount(account: LinkAccountInput): Promise<void> {
-    if (!drizzleAdapter.linkAccount) {
-      throw new Error("Adapter linkAccount handler is unavailable")
-    }
-
-    if (account.provider !== "google") {
-      await drizzleAdapter.linkAccount(account)
-      return
-    }
-
-    const encryptedAccessToken = account.access_token
-      ? await encryptToken(account.access_token)
-      : account.access_token
-    const encryptedRefreshToken = account.refresh_token
-      ? await encryptToken(account.refresh_token)
-      : account.refresh_token
-
-    await drizzleAdapter.linkAccount({
-      ...account,
-      access_token: encryptedAccessToken,
-      refresh_token: encryptedRefreshToken,
-    })
-    return
-  },
+  return { user, organization }
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter,
-  session: {
-    strategy: "jwt",
-  },
-  secret: authSecret,
-  pages: {
-    signIn: "/login",
-  },
-  providers,
-  callbacks: {
-    async jwt({ token, user, account }) {
-      // Store user ID on first sign-in
-      if (user) {
-        token.sub = user.id
-      }
+export async function auth(): Promise<CompatSession | null> {
+  const { data, error } = await neonAuth.getSession()
+  if (error || !data?.user) {
+    return null
+  }
 
-      if (token.sub === TEMP_LOCAL_TEST_USER_ID) {
-        token.orgId = "local-demo-org"
-      } else if (token.sub && (user || !token.orgId)) {
-        const organization = await getOrganizationByOwnerId(token.sub)
-        token.orgId = organization?.id ?? null
-      }
+  const { user, organization } = await ensureAppUserAndOrg({
+    id: data.user.id,
+    email: data.user.email,
+    name: data.user.name,
+    image: data.user.image ?? null,
+  })
 
-      // Store Google OAuth tokens for Gmail API access
-      if (account?.provider === "google") {
-        token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token
-        token.accessTokenExpiresAt =
-          account.expires_at != null
-            ? account.expires_at * 1000 // expires_at is in seconds
-            : Date.now() + 3600 * 1000  // fallback: 1 hour
-      }
-
-      return token
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      orgId: organization?.id ?? null,
     },
-    async session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
-      }
-      session.user.orgId = (token.orgId as string | null) ?? null
-      if (token.accessToken) {
-        session.user.accessToken = token.accessToken as string
-        session.user.refreshToken = (token.refreshToken as string) ?? null
-        session.user.accessTokenExpiresAt = (token.accessTokenExpiresAt as number) ?? null
-      }
-      return session
-    },
-  },
-})
+  }
+}
+
+export const handlers = neonAuth.handler()

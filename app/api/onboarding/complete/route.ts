@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
+import { z } from "zod"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 
-export async function POST() {
+const BodySchema = z.object({
+  organizationName: z.string().min(2).max(120).optional(),
+})
+
+export async function POST(request: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -20,9 +25,17 @@ export async function POST() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    const body = await request.json().catch(() => null)
+    const parsed = BodySchema.safeParse(body)
+
     await db
       .update(organizations)
-      .set({ onboardingCompleted: true })
+      .set({
+        onboardingCompleted: true,
+        ...(parsed.success && parsed.data.organizationName
+          ? { name: parsed.data.organizationName.trim() }
+          : {}),
+      })
       .where(eq(organizations.id, org.id))
 
     return NextResponse.json({ success: true })
