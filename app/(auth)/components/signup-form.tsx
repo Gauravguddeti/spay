@@ -17,7 +17,19 @@ type SignupPayload = {
   organizationName: string
 }
 
+type AuthErrorLike = {
+  code?: string
+  message?: string
+}
+
+type PendingVerification = {
+  email: string
+  password: string
+  organizationName: string
+}
+
 const PENDING_ONBOARDING_KEY = "spay.pending-onboarding"
+const OTP_RESEND_COOLDOWN_MS = 45_000
 
 export function SignupForm() {
   const router = useRouter()
@@ -27,6 +39,10 @@ export function SignupForm() {
     password: "",
     organizationName: "",
   })
+  const [verificationOtp, setVerificationOtp] = useState("")
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
+  const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null)
+  const [lastOtpSentAt, setLastOtpSentAt] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -34,33 +50,226 @@ export function SignupForm() {
     setPayload((prev) => ({ ...prev, [key]: value }))
   }
 
+  function normalizeEmail(value: string) {
+    return value.trim().toLowerCase()
+  }
+
+  function normalizeAuthError(error: unknown): AuthErrorLike {
+    if (!error) {
+      return { message: "Something went wrong" }
+    }
+
+    if (error instanceof Error) {
+      return { message: error.message }
+    }
+
+    if (typeof error === "object") {
+      const maybe = error as { code?: unknown; message?: unknown }
+      return {
+        code: typeof maybe.code === "string" ? maybe.code : undefined,
+        message: typeof maybe.message === "string" ? maybe.message : "Something went wrong",
+      }
+    }
+
+    if (typeof error === "string") {
+      return { message: error }
+    }
+
+    return { message: "Something went wrong" }
+  }
+
+  async function safeAuthCall<T extends { error?: AuthErrorLike | null }>(
+    action: () => Promise<T>,
+  ): Promise<{ result: T | null; error: AuthErrorLike | null }> {
+    try {
+      const result = await action()
+      return {
+        result,
+        error: result?.error ?? null,
+      }
+    } catch (error) {
+      return {
+        result: null,
+        error: normalizeAuthError(error),
+      }
+    }
+  }
+
+  function isEmailNotVerifiedError(authError: unknown) {
+    const maybe = authError as AuthErrorLike | null
+    const code = maybe?.code?.toLowerCase() ?? ""
+    const message = maybe?.message?.toLowerCase() ?? ""
+
+    return code.includes("email_not_verified") || message.includes("email not verified")
+  }
+
+  async function completeOnboarding(organizationName: string) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const bootstrapResponse = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationName }),
+      })
+
+      if (bootstrapResponse.ok) {
+        return { ok: true as const, status: 200 }
+      }
+
+      if (bootstrapResponse.status === 401 && attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 700))
+        continue
+      }
+
+      return { ok: false as const, status: bootstrapResponse.status }
+    }
+
+    return { ok: false as const, status: 500 }
+  }
+
+  async function beginEmailVerificationFlow(targetEmail: string, options?: { forceSend?: boolean }) {
+    const normalizedEmail = normalizeEmail(targetEmail)
+    if (!normalizedEmail) {
+      setError("Enter your email first")
+      return
+    }
+
+    const now = Date.now()
+    const elapsed = now - lastOtpSentAt
+    const isCoolingDown = lastOtpSentAt > 0 && elapsed < OTP_RESEND_COOLDOWN_MS
+
+    setRequiresEmailVerification(true)
+
+    if (isCoolingDown && !options?.forceSend) {
+      const waitSeconds = Math.max(1, Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000))
+      setError(`Enter the code from your inbox, or resend in ${waitSeconds}s.`)
+      return
+    }
+
+    const { error: sendOtpError } = await safeAuthCall(() =>
+      authClient.emailOtp.sendVerificationOtp({
+        email: normalizedEmail,
+        type: "email-verification",
+      }),
+    )
+
+    if (sendOtpError) {
+      setError(sendOtpError.message ?? "Could not send verification code")
+      return
+    }
+
+    setLastOtpSentAt(now)
+    setError("Account created. Enter the verification code we sent to your email.")
+  }
+
+  async function handleVerifyEmail() {
+    if (!pendingVerification) {
+      setError("Please create your account first")
+      return
+    }
+
+    const normalizedOtp = verificationOtp.trim()
+    if (!normalizedOtp) {
+      setError("Enter the verification code")
+      return
+    }
+
+    setIsLoading(true)
+
+    const { error: verifyError } = await safeAuthCall(() =>
+      authClient.emailOtp.verifyEmail({
+        email: pendingVerification.email,
+        otp: normalizedOtp,
+      }),
+    )
+
+    if (verifyError) {
+      setIsLoading(false)
+      setError(verifyError.message ?? "Invalid verification code")
+      return
+    }
+
+    let signInAfterVerifyError: AuthErrorLike | null = null
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { error } = await safeAuthCall(() =>
+        authClient.signIn.email({
+          email: pendingVerification.email,
+          password: pendingVerification.password,
+        }),
+      )
+      signInAfterVerifyError = error
+
+      if (!signInAfterVerifyError) {
+        break
+      }
+
+      if (!isEmailNotVerifiedError(signInAfterVerifyError)) {
+        break
+      }
+
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 700))
+      }
+    }
+
+    if (signInAfterVerifyError) {
+      setIsLoading(false)
+
+      if (isEmailNotVerifiedError(signInAfterVerifyError)) {
+        setError("Code accepted, but verification is still syncing. Wait a few seconds and click Verify Email once.")
+        return
+      }
+
+      setError(signInAfterVerifyError.message ?? "Email verified. Please sign in.")
+      return
+    }
+
+    await completeOnboarding(pendingVerification.organizationName)
+    localStorage.removeItem(PENDING_ONBOARDING_KEY)
+
+    setRequiresEmailVerification(false)
+    setPendingVerification(null)
+    setVerificationOtp("")
+    setIsLoading(false)
+    router.push("/dashboard")
+    router.refresh()
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setIsLoading(true)
 
-    const signUpResult = await authClient.signUp.email({
-      email: payload.email,
-      name: payload.name,
-      password: payload.password,
-      callbackURL: "/dashboard",
-    })
-
-    if (signUpResult.error) {
+    if (requiresEmailVerification && pendingVerification) {
       setIsLoading(false)
-      setError(signUpResult.error.message ?? "Could not create account")
+      setError("Enter the verification code and click Verify Email")
       return
     }
 
-    const bootstrapResponse = await fetch("/api/onboarding/complete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ organizationName: payload.organizationName }),
-    })
+    const normalizedEmail = normalizeEmail(payload.email)
+    const normalizedOrganizationName = payload.organizationName.trim()
 
-    if (bootstrapResponse.ok) {
+    const { error: signUpError } = await safeAuthCall(() =>
+      authClient.signUp.email({
+        email: normalizedEmail,
+        name: payload.name,
+        password: payload.password,
+        callbackURL: "/dashboard",
+      }),
+    )
+
+    if (signUpError) {
+      setIsLoading(false)
+      setError(signUpError.message ?? "Could not create account")
+      return
+    }
+
+    const onboardingResult = await completeOnboarding(normalizedOrganizationName)
+
+    if (onboardingResult.ok) {
+      localStorage.removeItem(PENDING_ONBOARDING_KEY)
       setIsLoading(false)
       router.push("/dashboard")
       router.refresh()
@@ -68,23 +277,33 @@ export function SignupForm() {
     }
 
     // Neon can require email verification before creating a logged-in session.
-    // Persist onboarding intent and complete it right after first successful login.
-    if (bootstrapResponse.status === 401) {
+    // Persist onboarding intent in case user leaves before completing OTP verification.
+    if (onboardingResult.status === 401) {
+      const pending = {
+        email: normalizedEmail,
+        password: payload.password,
+        organizationName: normalizedOrganizationName,
+      }
+
       localStorage.setItem(
         PENDING_ONBOARDING_KEY,
         JSON.stringify({
-          email: payload.email.trim().toLowerCase(),
-          organizationName: payload.organizationName.trim(),
+          email: pending.email,
+          organizationName: pending.organizationName,
         }),
       )
+
+      setPendingVerification(pending)
+      await beginEmailVerificationFlow(pending.email, { forceSend: true })
       setIsLoading(false)
-      router.push(`/login?email=${encodeURIComponent(payload.email)}&onboarding=pending`)
       return
     }
 
     setIsLoading(false)
     setError("Account created but onboarding setup failed. Please sign in and try again.")
   }
+
+  const accountPendingVerification = requiresEmailVerification && !!pendingVerification
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
@@ -99,6 +318,7 @@ export function SignupForm() {
         <Input
           id="name"
           name="name"
+          disabled={isLoading || accountPendingVerification}
           required
           minLength={2}
           value={payload.name}
@@ -112,6 +332,7 @@ export function SignupForm() {
         <Input
           id="organizationName"
           name="organizationName"
+          disabled={isLoading || accountPendingVerification}
           required
           minLength={2}
           value={payload.organizationName}
@@ -125,6 +346,7 @@ export function SignupForm() {
         <Input
           id="email"
           name="email"
+          disabled={isLoading || accountPendingVerification}
           type="email"
           autoComplete="email"
           required
@@ -139,6 +361,7 @@ export function SignupForm() {
         <Input
           id="password"
           name="password"
+          disabled={isLoading || accountPendingVerification}
           type="password"
           autoComplete="new-password"
           required
@@ -149,8 +372,43 @@ export function SignupForm() {
         />
       </div>
 
+      {requiresEmailVerification ? (
+        <div className="space-y-2">
+          <Label htmlFor="verificationOtp">Email Verification Code</Label>
+          <Input
+            id="verificationOtp"
+            name="verificationOtp"
+            inputMode="numeric"
+            required
+            value={verificationOtp}
+            onChange={(event) => setVerificationOtp(event.target.value)}
+            placeholder="Enter OTP from your email"
+          />
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 rounded-none"
+              disabled={isLoading}
+              onClick={handleVerifyEmail}
+              type="button"
+              variant="secondary"
+            >
+              Verify Email
+            </Button>
+            <Button
+              className="flex-1 rounded-none"
+              disabled={isLoading}
+              onClick={() => beginEmailVerificationFlow(payload.email, { forceSend: true })}
+              type="button"
+              variant="outline"
+            >
+              Resend Code
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <Button className="w-full rounded-none" disabled={isLoading} type="submit">
-        {isLoading ? "Creating account..." : "Create SPAY Account"}
+        {isLoading ? "Creating account..." : requiresEmailVerification ? "Awaiting verification..." : "Create SPAY Account"}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
