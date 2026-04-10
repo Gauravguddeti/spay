@@ -19,6 +19,9 @@ const updateSubscriptionSchema = z.object({
   status: z.enum(["active", "cancelled", "paused"]).optional(),
   detectedVia: z.enum(["manual", "gmail", "bank_statement"]).optional(),
   lastUsedAt: z.string().optional().nullable(),
+  cancelledAt: z.string().optional().nullable(),
+  cancellationVerified: z.boolean().optional(),
+  notes: z.string().max(500).optional().nullable(),
 })
 
 async function getOrgForRequest() {
@@ -83,6 +86,15 @@ export async function PATCH(
             lastUsedAt: parsed.data.lastUsedAt ? new Date(parsed.data.lastUsedAt) : null,
           }
         : {}),
+      ...(parsed.data.cancelledAt !== undefined
+        ? {
+            cancelledAt: parsed.data.cancelledAt ? new Date(parsed.data.cancelledAt) : null,
+          }
+        : {}),
+      ...(parsed.data.cancellationVerified !== undefined
+        ? { cancellationVerified: parsed.data.cancellationVerified }
+        : {}),
+      ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
     })
 
     return NextResponse.json({ subscription: updated })

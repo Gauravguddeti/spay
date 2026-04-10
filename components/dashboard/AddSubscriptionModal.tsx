@@ -42,6 +42,7 @@ export type SubscriptionFormValues = {
   nextRenewalDate: string
   status: SubscriptionStatus
   lastUsedAt: string
+  notes?: string
 }
 
 type AddSubscriptionModalProps = {
@@ -80,6 +81,7 @@ function defaultFormValues(): SubscriptionFormValues {
     nextRenewalDate: "",
     status: "active",
     lastUsedAt: "",
+    notes: "",
   }
 }
 
@@ -269,6 +271,26 @@ export function AddSubscriptionModal({
                 value={values.lastUsedAt}
               />
             </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label htmlFor="notes">
+              Notes{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <textarea
+              id="notes"
+              value={values.notes ?? ""}
+              onChange={(e) => setField("notes", e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="e.g. Shared with design team, cancel before March..."
+              className="w-full rounded-none border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary transition-colors resize-none"
+            />
+            <p className="text-right text-xs text-muted-foreground">
+              {(values.notes ?? "").length}/500
+            </p>
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}

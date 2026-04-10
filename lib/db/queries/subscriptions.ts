@@ -59,6 +59,7 @@ export type AddSubscriptionInput = {
   usageStatus?: UsageStatus
   originalAmount?: string | null
   originalCurrency?: string | null
+  notes?: string | null
 }
 
 export type UpdateSubscriptionInput = Partial<
@@ -75,8 +76,12 @@ export type UpdateSubscriptionInput = Partial<
     | "usageStatus"
     | "originalAmount"
     | "originalCurrency"
+    | "notes"
   >
->
+> & {
+  cancelledAt?: Date | null
+  cancellationVerified?: boolean
+}
 
 export async function getSubscriptionsByOrg(orgId: string) {
   return db

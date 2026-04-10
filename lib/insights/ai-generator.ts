@@ -1,33 +1,137 @@
-import {
-  type SubscriptionForInsights,
-  getUnusedSubscriptions,
-  getDuplicateCategories,
-  getRenewalRisks,
-} from "./analyzer"
+import { differenceInDays } from "date-fns"
 
-export type AIInsightMessage = {
-  type: "success" | "warning" | "danger" | "celebration"
-  title: string
-  message: string
+export type InsightSeverity = "info" | "warning" | "danger" | "success"
+
+export interface ConversationalInsight {
+  id: string
+  severity: InsightSeverity
+  headline: string
+  detail: string
 }
 
-function formatInr(amount: number) {
+type SubscriptionForInsights = {
+  id: string
+  name: string
+  amountInr: string
+  billingCycle: string
+  status: string
+  lastUsedAt: Date | string | null
+  nextRenewalDate: Date | string | null
+  category: string | null
+  createdAt: Date | string
+}
+
+function formatInr(n: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amount)
+  }).format(n)
 }
 
-/**
- * Generates a single, highly conversational "AI Insight" given the user's raw subscriptions.
- * Prioritizes insights in this order: Immediate highest risk/waste -> general waste -> clean state.
- */
-export function generateAiInsight(
-  subs: SubscriptionForInsights[],
-): AIInsightMessage {
-  // Edge case: No data
-  if (!subs || subs.length === 0) {
+function toDate(d: Date | string | null): Date | null {
+  if (!d) return null
+  return d instanceof Date ? d : new Date(d)
+}
+
+export function generateConversationalInsights(
+  subscriptions: SubscriptionForInsights[],
+): ConversationalInsight[] {
+  const active = subscriptions.filter((s) => s.status === "active")
+  if (active.length === 0) return []
+
+  const insights: ConversationalInsight[] = []
+  const today = new Date()
+
+  // 1. Total monthly spend
+  const totalMonthly = active.reduce((acc, s) => {
+    const amount = Number(s.amountInr)
+    return acc + (s.billingCycle === "annual" ? amount / 12 : amount)
+  }, 0)
+  insights.push({
+    id: "total-spend",
+    severity: totalMonthly > 20000 ? "warning" : "info",
+    headline: `You're spending ${formatInr(totalMonthly)}/month on SaaS`,
+    detail:
+      totalMonthly > 20000
+        ? `That's a significant SaaS budget. Check if every tool is earning its keep.`
+        : `Across ${active.length} active ${active.length === 1 ? "tool" : "tools"}. That's your full monthly bill.`,
+  })
+
+  // 2. Unused tools
+  const unused = active.filter((s) => {
+    const last = toDate(s.lastUsedAt)
+    return last && differenceInDays(today, last) >= 45
+  })
+  if (unused.length > 0) {
+    const unusedCost = unused.reduce((acc, s) => acc + Number(s.amountInr), 0)
+    insights.push({
+      id: "unused-tools",
+      severity: "danger",
+      headline: `${formatInr(unusedCost)} looks wasteful — ${unused.length} ${unused.length === 1 ? "tool" : "tools"} unused for 45+ days`,
+      detail: `${unused.map((s) => s.name).join(", ")} ${unused.length === 1 ? "hasn't" : "haven't"} been used recently. Consider cancelling or pausing ${unused.length === 1 ? "it" : "them"}.`,
+    })
+  }
+
+  // 3. Renewals this week
+  const renewingSoon = active.filter((s) => {
+    const d = toDate(s.nextRenewalDate)
+    if (!d) return false
+    const diff = differenceInDays(d, today)
+    return diff >= 0 && diff <= 7
+  })
+  if (renewingSoon.length > 0) {
+    insights.push({
+      id: "renewals-soon",
+      severity: renewingSoon.length >= 3 ? "warning" : "info",
+      headline: `${renewingSoon.length} ${renewingSoon.length === 1 ? "tool is" : "tools are"} renewing this week`,
+      detail: `${renewingSoon.map((s) => s.name).join(", ")} will auto-charge soon. Heads up!`,
+    })
+  }
+
+  // 4. Duplicate categories
+  const categoryMap = new Map<string, string[]>()
+  for (const s of active) {
+    if (!s.category) continue
+    const existing = categoryMap.get(s.category) ?? []
+    categoryMap.set(s.category, [...existing, s.name])
+  }
+  for (const [category, names] of categoryMap.entries()) {
+    if (names.length >= 2) {
+      insights.push({
+        id: `dup-${category}`,
+        severity: "warning",
+        headline: `You have ${names.length} ${category} tools — that might be overlap`,
+        detail: `${names.join(" and ")} are both in the same category. Could you consolidate to just one?`,
+      })
+      break // Only show first duplicate group
+    }
+  }
+
+  // 5. All clear
+  if (insights.length === 1) {
+    // Only total spend insight
+    insights.push({
+      id: "all-clear",
+      severity: "success",
+      headline: "Your stack looks lean and healthy!",
+      detail: "No unused tools, no upcoming surprises. Keep it up.",
+    })
+  }
+
+  return insights
+}
+
+// ─── Legacy single-insight API (still used by AIInsightCard) ─────────────────
+export type AIInsightMessage = {
+  type: "danger" | "warning" | "success" | "celebration"
+  title: string
+  message: string
+}
+
+export function generateAiInsight(subscriptions: SubscriptionForInsights[]): AIInsightMessage {
+  const insights = generateConversationalInsights(subscriptions)
+  if (insights.length === 0) {
     return {
       type: "success",
       title: "Hey there!",
@@ -36,65 +140,10 @@ export function generateAiInsight(
     }
   }
 
-  const unused = getUnusedSubscriptions(subs)
-  const duplicates = getDuplicateCategories(subs)
-  const risks = getRenewalRisks(subs)
-
-  // 1. High Priority: Danger (Renewals happening in days that are unused)
-  if (risks.length > 0) {
-    // Take the most urgent or most expensive risk
-    const imminent = risks.sort((a, b) => a.daysUntilRenewal - b.daysUntilRenewal)[0]
-    const useStatus =
-      imminent.daysSinceUse !== null
-        ? `hasn't been logged into for ${imminent.daysSinceUse} days`
-        : "nobody has used recently"
-
-    return {
-      type: "danger",
-      title: "Critical Renewal Warning",
-      message: `Heads up! Your **${imminent.name}** subscription renews in just **${imminent.daysUntilRenewal} ${imminent.daysUntilRenewal === 1 ? "day" : "days"}** for ${formatInr(imminent.monthlyInr)}, but our scan shows that it ${useStatus}. Might be a completely wasted charge! Jump into your settings to cancel it today if you don't need it anymore.`,
-    }
-  }
-
-  // 2. Medium Priority: Wasted money on duplicate tools
-  if (duplicates.length > 0) {
-    // Pick highest value category
-    const topCat = duplicates[0]
-    // Get the cheapest and most expensive tool
-    const sorted = [...topCat.subscriptions].sort((a, b) => a.monthlyInr - b.monthlyInr)
-    const cheapest = sorted[0].name
-    const expensiveList = sorted.filter(s => s.name !== cheapest)
-    const extraCost = expensiveList.reduce((acc, curr) => acc + curr.monthlyInr, 0)
-    const toolNames = topCat.subscriptions.map((s) => `**${s.name}**`).join(" and ")
-
-    return {
-      type: "warning",
-      title: "Duplicate Payments Detected",
-      message: `Looks like you are overpaying by running both ${toolNames} for your **${topCat.category || "software"}** needs. Since your team uses multiple similar apps, standardizing on just **${cheapest}** could immediately cut your bills by **${formatInr(extraCost)}** every single month. Talk to your team about consolidating them!`,
-    }
-  }
-
-  // 3. Medium Priority: Completely unused tools 
-  if (unused.length > 0) {
-    // Sort by most expensive unused tool
-    const worst = unused.sort((a, b) => b.monthlyInr - a.monthlyInr)[0]
-    const daysStr =
-      worst.daysSinceUse !== null
-        ? `over ${worst.daysSinceUse} days`
-        : "a very, very long time"
-
-    return {
-      type: "warning",
-      title: "Subscription Gathering Dust",
-      message: `We spotted a big leak: **${worst.name}**. Nobody on the team has used it in ${daysStr}, but it's still bleeding **${formatInr(worst.monthlyInr)}** a month from your company card. This is literally free money sitting on the table. Go cancel it right now and treat the team to coffee instead!`,
-    }
-  }
-
-  // 4. Fallback Priority: All clean, optimization complete
+  const top = insights[0]
   return {
-    type: "celebration",
-    title: "Perfectly Optimized",
-    message:
-      "I've scanned all your active subscriptions and everything looks perfectly dialed in right now! No duplicate categories, no forgotten ghost subscriptions, and no scary immediate renewals coming up. Keep up the great financial hygiene!",
+    type: top.severity === "danger" ? "danger" : top.severity === "warning" ? "warning" : "celebration",
+    title: top.headline,
+    message: top.detail,
   }
 }

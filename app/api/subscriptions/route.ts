@@ -15,6 +15,7 @@ const createSubscriptionSchema = z.object({
   status: z.enum(["active", "cancelled", "paused"]).optional(),
   detectedVia: z.enum(["manual", "gmail", "bank_statement"]).optional(),
   lastUsedAt: z.string().optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
 })
 
 export async function POST(request: Request) {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
       detectedVia: parsed.data.detectedVia ?? "manual",
       nextRenewalDate: parsed.data.nextRenewalDate ? new Date(parsed.data.nextRenewalDate) : null,
       lastUsedAt: parsed.data.lastUsedAt ? new Date(parsed.data.lastUsedAt) : null,
+      notes: parsed.data.notes ?? null,
     })
 
     return NextResponse.json({ subscription: created }, { status: 201 })

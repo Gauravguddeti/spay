@@ -5,6 +5,7 @@ import { Syne, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import { Providers } from "@/components/providers"
+import { NavigationProgress } from "@/components/ui/NavigationProgress"
 import "./globals.css"
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
@@ -32,6 +33,7 @@ export default function RootLayout({
         className={`${dmSans.variable} ${playfair.variable} ${jetbrainsMono.variable} ${syne.variable} ${inter.variable} font-sans antialiased`}
       >
         <Providers>
+          <NavigationProgress />
           {children}
           <Toaster richColors position="bottom-right" />
           <Analytics />

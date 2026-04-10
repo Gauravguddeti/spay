@@ -75,6 +75,8 @@ export const organizations = pgTable("organizations", {
   whatsappNumber: text("whatsapp_number"),
   // Alert preferences: { days30: boolean, days7: boolean, days1: boolean }
   alertPreferences: jsonb("alert_preferences"),
+  // Onboarding wizard completion flag
+  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -102,6 +104,11 @@ export const subscriptions = pgTable(
     // INR conversion uses a static rate map; see lib/integrations/gmail.ts
     originalAmount: numeric("original_amount", { precision: 12, scale: 2 }),
     originalCurrency: text("original_currency").default("INR"),
+    // Cancellation tracking
+    cancelledAt: timestamp("cancelled_at", { mode: "date", withTimezone: true }),
+    cancellationVerified: boolean("cancellation_verified").default(false).notNull(),
+    // User notes (optional, max 500 chars)
+    notes: text("notes"),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
