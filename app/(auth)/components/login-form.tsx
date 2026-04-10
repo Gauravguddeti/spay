@@ -16,6 +16,8 @@ export function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [verificationOtp, setVerificationOtp] = useState("")
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -65,6 +67,63 @@ export function LoginForm() {
     }
   }
 
+  function isEmailNotVerifiedError(authError: unknown) {
+    const maybe = authError as { code?: string; message?: string } | null
+    const code = maybe?.code?.toLowerCase() ?? ""
+    const message = maybe?.message?.toLowerCase() ?? ""
+
+    return code.includes("email_not_verified") || message.includes("email not verified")
+  }
+
+  async function beginEmailVerificationFlow(targetEmail: string) {
+    const sent = await authClient.emailOtp.sendVerificationOtp({
+      email: targetEmail,
+      type: "email-verification",
+    })
+
+    setRequiresEmailVerification(true)
+
+    if (sent.error) {
+      setError(sent.error.message ?? "Email is not verified. Could not send verification code.")
+      return
+    }
+
+    setError("Email is not verified. We sent a verification code to your inbox.")
+  }
+
+  async function handleVerifyEmailOtp() {
+    if (!email || !verificationOtp) {
+      setError("Enter email and verification code")
+      return
+    }
+
+    setIsLoading(true)
+    const verified = await authClient.emailOtp.verifyEmail({
+      email,
+      otp: verificationOtp,
+    })
+
+    if (verified.error) {
+      setIsLoading(false)
+      setError(verified.error.message ?? "Invalid verification code")
+      return
+    }
+
+    const signInAfterVerify = await authClient.signIn.email({ email, password })
+    if (signInAfterVerify.error) {
+      setIsLoading(false)
+      setError(signInAfterVerify.error.message ?? "Email verified. Please sign in again.")
+      return
+    }
+
+    await tryCompletePendingOnboarding(email)
+    setRequiresEmailVerification(false)
+    setVerificationOtp("")
+    setIsLoading(false)
+    router.push("/dashboard")
+    router.refresh()
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
@@ -80,6 +139,12 @@ export function LoginForm() {
       setIsLoading(false)
       router.push("/dashboard")
       router.refresh()
+      return
+    }
+
+    if (isEmailNotVerifiedError(signInResult.error)) {
+      await beginEmailVerificationFlow(email)
+      setIsLoading(false)
       return
     }
 
@@ -122,6 +187,11 @@ export function LoginForm() {
       setIsLoading(false)
 
       if (retry.error) {
+        if (isEmailNotVerifiedError(retry.error)) {
+          await beginEmailVerificationFlow(email)
+          return
+        }
+
         setError(retry.error.message ?? "Account migration failed. Please use Sign up once, then login.")
         return
       }
@@ -129,6 +199,19 @@ export function LoginForm() {
       await tryCompletePendingOnboarding(email)
       router.push("/dashboard")
       router.refresh()
+      return
+    }
+
+    const signInAfterMigration = await authClient.signIn.email({ email, password })
+    if (signInAfterMigration.error) {
+      setIsLoading(false)
+
+      if (isEmailNotVerifiedError(signInAfterMigration.error)) {
+        await beginEmailVerificationFlow(email)
+        return
+      }
+
+      setError(signInAfterMigration.error.message ?? "Account created but sign in failed. Please login again.")
       return
     }
 
@@ -174,6 +257,41 @@ export function LoginForm() {
           placeholder="At least 8 characters"
         />
       </div>
+
+      {requiresEmailVerification ? (
+        <div className="space-y-2">
+          <Label htmlFor="verificationOtp">Email Verification Code</Label>
+          <Input
+            id="verificationOtp"
+            name="verificationOtp"
+            inputMode="numeric"
+            required
+            value={verificationOtp}
+            onChange={(event) => setVerificationOtp(event.target.value)}
+            placeholder="Enter OTP from your email"
+          />
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 rounded-none"
+              disabled={isLoading}
+              onClick={handleVerifyEmailOtp}
+              type="button"
+              variant="secondary"
+            >
+              Verify Email
+            </Button>
+            <Button
+              className="flex-1 rounded-none"
+              disabled={isLoading}
+              onClick={() => beginEmailVerificationFlow(email)}
+              type="button"
+              variant="outline"
+            >
+              Resend Code
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <Button className="w-full rounded-none" disabled={isLoading} type="submit">
         {isLoading ? "Signing in..." : "Sign In"}
