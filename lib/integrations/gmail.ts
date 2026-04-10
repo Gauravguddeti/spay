@@ -155,6 +155,8 @@ function extractAmountAndCurrency(text: string): {
 export async function refreshAccessTokenIfNeeded(tokens: GmailTokens): Promise<RefreshedTokens> {
   const FIVE_MINUTES_MS = 5 * 60 * 1000
   const isExpiringSoon = tokens.accessTokenExpiresAt - Date.now() < FIVE_MINUTES_MS
+  const googleClientId = process.env.GOOGLE_CLIENT_ID ?? process.env.AUTH_GOOGLE_ID ?? ""
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? process.env.AUTH_GOOGLE_SECRET ?? ""
 
   if (!isExpiringSoon) {
     return {
@@ -163,14 +165,20 @@ export async function refreshAccessTokenIfNeeded(tokens: GmailTokens): Promise<R
     }
   }
 
+  if (!googleClientId || !googleClientSecret) {
+    throw Object.assign(new Error("Google OAuth environment variables are missing"), {
+      code: "GMAIL_AUTH_EXPIRED",
+    })
+  }
+
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: tokens.refreshToken,
-      client_id: process.env.GOOGLE_CLIENT_ID ?? "",
-      client_secret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      client_id: googleClientId,
+      client_secret: googleClientSecret,
     }),
   })
 

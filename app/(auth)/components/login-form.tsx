@@ -22,18 +22,62 @@ export function LoginForm() {
     setIsLoading(true)
     setError(null)
 
-    const { error } = await authClient.signIn.email({
+    const signInResult = await authClient.signIn.email({
       email,
       password,
     })
 
-    setIsLoading(false)
+    if (!signInResult.error) {
+      setIsLoading(false)
+      router.push("/dashboard")
+      router.refresh()
+      return
+    }
 
-    if (error) {
+    // Fallback path: migrate legacy bcrypt users into Neon Auth on first login.
+    const legacyResponse = await fetch("/api/auth/legacy-verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    })
+
+    if (!legacyResponse.ok) {
+      setIsLoading(false)
       setError("Incorrect email or password")
       return
     }
 
+    const legacyData = (await legacyResponse.json()) as { valid?: boolean; name?: string }
+    if (!legacyData.valid) {
+      setIsLoading(false)
+      setError("Incorrect email or password")
+      return
+    }
+
+    const migrated = await authClient.signUp.email({
+      email,
+      password,
+      name: legacyData.name ?? "SPAY User",
+      callbackURL: "/dashboard",
+    })
+
+    if (migrated.error) {
+      const retry = await authClient.signIn.email({ email, password })
+      setIsLoading(false)
+
+      if (retry.error) {
+        setError("Account migration failed. Please use Sign up once, then login.")
+        return
+      }
+
+      router.push("/dashboard")
+      router.refresh()
+      return
+    }
+
+    setIsLoading(false)
     router.push("/dashboard")
     router.refresh()
   }
