@@ -121,7 +121,7 @@ export function KanbanBoard({
     if (!newCardTitle.trim()) return
 
     const newTask: KanbanTask = {
-      id: `task-${Date.now()}`,
+      id: `task-${crypto.randomUUID()}`,
       title: newCardTitle.trim(),
       labels: [],
     }

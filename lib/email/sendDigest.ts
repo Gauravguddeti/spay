@@ -1,8 +1,5 @@
 import { Resend } from "resend"
 import { buildWeeklyDigestHtml } from "./digestTemplate"
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function sendWeeklyDigest({
   to,
   userName,
@@ -22,6 +19,8 @@ export async function sendWeeklyDigest({
   const label = date.toLocaleDateString("en-IN", { month: "long", day: "numeric" })
 
   const html = buildWeeklyDigestHtml({ userName, monthlySpend, renewals, savingOpportunity, appUrl })
+
+  const resend = new Resend(process.env.RESEND_API_KEY || "dummy")
 
   return resend.emails.send({
     from: "SPAY <digest@spay.app>",
