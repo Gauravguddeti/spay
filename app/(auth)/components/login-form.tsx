@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 const PENDING_ONBOARDING_KEY = "spay.pending-onboarding"
+const OTP_RESEND_COOLDOWN_MS = 45_000
 
 type AuthErrorLike = {
   code?: string
@@ -23,6 +24,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [verificationOtp, setVerificationOtp] = useState("")
   const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
+  const [lastOtpSentAt, setLastOtpSentAt] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -96,6 +98,10 @@ export function LoginForm() {
     return { message: "Something went wrong" }
   }
 
+  function normalizeEmail(value: string) {
+    return value.trim().toLowerCase()
+  }
+
   async function safeAuthCall<T extends { error?: AuthErrorLike | null }>(
     action: () => Promise<T>,
   ): Promise<{ result: T | null; error: AuthErrorLike | null }> {
@@ -121,26 +127,46 @@ export function LoginForm() {
     return code.includes("email_not_verified") || message.includes("email not verified")
   }
 
-  async function beginEmailVerificationFlow(targetEmail: string) {
+  async function beginEmailVerificationFlow(targetEmail: string, options?: { forceSend?: boolean }) {
+    const normalizedEmail = normalizeEmail(targetEmail)
+    if (!normalizedEmail) {
+      setError("Enter your email first")
+      return
+    }
+
+    const now = Date.now()
+    const elapsed = now - lastOtpSentAt
+    const isCoolingDown = lastOtpSentAt > 0 && elapsed < OTP_RESEND_COOLDOWN_MS
+
+    setRequiresEmailVerification(true)
+
+    if (isCoolingDown && !options?.forceSend) {
+      const waitSeconds = Math.max(1, Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000))
+      setError(`Email is not verified. Enter the code from your inbox, or resend in ${waitSeconds}s.`)
+      return
+    }
+
     const { error: sendOtpError } = await safeAuthCall(() =>
       authClient.emailOtp.sendVerificationOtp({
-        email: targetEmail,
+        email: normalizedEmail,
         type: "email-verification",
       }),
     )
-
-    setRequiresEmailVerification(true)
 
     if (sendOtpError) {
       setError(sendOtpError.message ?? "Email is not verified. Could not send verification code.")
       return
     }
 
+    setLastOtpSentAt(now)
     setError("Email is not verified. We sent a verification code to your inbox.")
   }
 
   async function handleVerifyEmailOtp() {
-    if (!email || !verificationOtp) {
+    const normalizedEmail = normalizeEmail(email)
+    const normalizedOtp = verificationOtp.trim()
+
+    if (!normalizedEmail || !normalizedOtp) {
       setError("Enter email and verification code")
       return
     }
@@ -148,8 +174,8 @@ export function LoginForm() {
     setIsLoading(true)
     const { error: verifyError } = await safeAuthCall(() =>
       authClient.emailOtp.verifyEmail({
-        email,
-        otp: verificationOtp,
+        email: normalizedEmail,
+        otp: normalizedOtp,
       }),
     )
 
@@ -159,14 +185,38 @@ export function LoginForm() {
       return
     }
 
-    const { error: signInAfterVerifyError } = await safeAuthCall(() => authClient.signIn.email({ email, password }))
+    let signInAfterVerifyError: AuthErrorLike | null = null
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { error } = await safeAuthCall(() => authClient.signIn.email({ email: normalizedEmail, password }))
+      signInAfterVerifyError = error
+
+      if (!signInAfterVerifyError) {
+        break
+      }
+
+      if (!isEmailNotVerifiedError(signInAfterVerifyError)) {
+        break
+      }
+
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 700))
+      }
+    }
+
     if (signInAfterVerifyError) {
       setIsLoading(false)
+
+      if (isEmailNotVerifiedError(signInAfterVerifyError)) {
+        setError("Code accepted, but verification is still syncing. Please wait a few seconds and click Sign In once.")
+        return
+      }
+
       setError(signInAfterVerifyError.message ?? "Email verified. Please sign in again.")
       return
     }
 
-    await tryCompletePendingOnboarding(email)
+    await tryCompletePendingOnboarding(normalizedEmail)
     setRequiresEmailVerification(false)
     setVerificationOtp("")
     setIsLoading(false)
@@ -179,15 +229,17 @@ export function LoginForm() {
     setIsLoading(true)
     setError(null)
 
+    const normalizedEmail = normalizeEmail(email)
+
     const { error: signInError } = await safeAuthCall(() =>
       authClient.signIn.email({
-        email,
+        email: normalizedEmail,
         password,
       }),
     )
 
     if (!signInError) {
-      await tryCompletePendingOnboarding(email)
+      await tryCompletePendingOnboarding(normalizedEmail)
       setIsLoading(false)
       router.push("/dashboard")
       router.refresh()
@@ -195,7 +247,13 @@ export function LoginForm() {
     }
 
     if (isEmailNotVerifiedError(signInError)) {
-      await beginEmailVerificationFlow(email)
+      if (requiresEmailVerification) {
+        setError("Email is not verified. Enter the code from your inbox, then click Verify Email.")
+        setIsLoading(false)
+        return
+      }
+
+      await beginEmailVerificationFlow(normalizedEmail)
       setIsLoading(false)
       return
     }
@@ -206,7 +264,7 @@ export function LoginForm() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: normalizedEmail, password }),
     })
 
     if (!legacyResponse.ok) {
@@ -229,7 +287,7 @@ export function LoginForm() {
 
     const { error: migrationError } = await safeAuthCall(() =>
       authClient.signUp.email({
-        email,
+        email: normalizedEmail,
         password,
         name: legacyData.name ?? "SPAY User",
         callbackURL: "/dashboard",
@@ -237,12 +295,18 @@ export function LoginForm() {
     )
 
     if (migrationError) {
-      const { error: retryError } = await safeAuthCall(() => authClient.signIn.email({ email, password }))
+      const { error: retryError } = await safeAuthCall(() =>
+        authClient.signIn.email({ email: normalizedEmail, password }),
+      )
       setIsLoading(false)
 
       if (retryError) {
         if (isEmailNotVerifiedError(retryError)) {
-          await beginEmailVerificationFlow(email)
+          if (!requiresEmailVerification) {
+            await beginEmailVerificationFlow(normalizedEmail)
+          } else {
+            setError("Email is not verified. Enter the code from your inbox, then click Verify Email.")
+          }
           return
         }
 
@@ -250,18 +314,24 @@ export function LoginForm() {
         return
       }
 
-      await tryCompletePendingOnboarding(email)
+      await tryCompletePendingOnboarding(normalizedEmail)
       router.push("/dashboard")
       router.refresh()
       return
     }
 
-    const { error: signInAfterMigrationError } = await safeAuthCall(() => authClient.signIn.email({ email, password }))
+    const { error: signInAfterMigrationError } = await safeAuthCall(() =>
+      authClient.signIn.email({ email: normalizedEmail, password }),
+    )
     if (signInAfterMigrationError) {
       setIsLoading(false)
 
       if (isEmailNotVerifiedError(signInAfterMigrationError)) {
-        await beginEmailVerificationFlow(email)
+        if (!requiresEmailVerification) {
+          await beginEmailVerificationFlow(normalizedEmail)
+        } else {
+          setError("Email is not verified. Enter the code from your inbox, then click Verify Email.")
+        }
         return
       }
 
@@ -269,7 +339,7 @@ export function LoginForm() {
       return
     }
 
-    await tryCompletePendingOnboarding(email)
+    await tryCompletePendingOnboarding(normalizedEmail)
     setIsLoading(false)
     router.push("/dashboard")
     router.refresh()
@@ -351,7 +421,7 @@ export function LoginForm() {
             <Button
               className="flex-1 rounded-none"
               disabled={isLoading}
-              onClick={() => beginEmailVerificationFlow(email)}
+              onClick={() => beginEmailVerificationFlow(email, { forceSend: true })}
               type="button"
               variant="outline"
             >
