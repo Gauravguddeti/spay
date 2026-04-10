@@ -12,6 +12,11 @@ import { Label } from "@/components/ui/label"
 
 const PENDING_ONBOARDING_KEY = "spay.pending-onboarding"
 
+type AuthErrorLike = {
+  code?: string
+  message?: string
+}
+
 export function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState("")
@@ -67,8 +72,49 @@ export function LoginForm() {
     }
   }
 
+  function normalizeAuthError(error: unknown): AuthErrorLike {
+    if (!error) {
+      return { message: "Something went wrong" }
+    }
+
+    if (error instanceof Error) {
+      return { message: error.message }
+    }
+
+    if (typeof error === "object") {
+      const maybe = error as { code?: unknown; message?: unknown }
+      return {
+        code: typeof maybe.code === "string" ? maybe.code : undefined,
+        message: typeof maybe.message === "string" ? maybe.message : "Something went wrong",
+      }
+    }
+
+    if (typeof error === "string") {
+      return { message: error }
+    }
+
+    return { message: "Something went wrong" }
+  }
+
+  async function safeAuthCall<T extends { error?: AuthErrorLike | null }>(
+    action: () => Promise<T>,
+  ): Promise<{ result: T | null; error: AuthErrorLike | null }> {
+    try {
+      const result = await action()
+      return {
+        result,
+        error: result?.error ?? null,
+      }
+    } catch (error) {
+      return {
+        result: null,
+        error: normalizeAuthError(error),
+      }
+    }
+  }
+
   function isEmailNotVerifiedError(authError: unknown) {
-    const maybe = authError as { code?: string; message?: string } | null
+    const maybe = authError as AuthErrorLike | null
     const code = maybe?.code?.toLowerCase() ?? ""
     const message = maybe?.message?.toLowerCase() ?? ""
 
@@ -76,15 +122,17 @@ export function LoginForm() {
   }
 
   async function beginEmailVerificationFlow(targetEmail: string) {
-    const sent = await authClient.emailOtp.sendVerificationOtp({
-      email: targetEmail,
-      type: "email-verification",
-    })
+    const { error: sendOtpError } = await safeAuthCall(() =>
+      authClient.emailOtp.sendVerificationOtp({
+        email: targetEmail,
+        type: "email-verification",
+      }),
+    )
 
     setRequiresEmailVerification(true)
 
-    if (sent.error) {
-      setError(sent.error.message ?? "Email is not verified. Could not send verification code.")
+    if (sendOtpError) {
+      setError(sendOtpError.message ?? "Email is not verified. Could not send verification code.")
       return
     }
 
@@ -98,21 +146,23 @@ export function LoginForm() {
     }
 
     setIsLoading(true)
-    const verified = await authClient.emailOtp.verifyEmail({
-      email,
-      otp: verificationOtp,
-    })
+    const { error: verifyError } = await safeAuthCall(() =>
+      authClient.emailOtp.verifyEmail({
+        email,
+        otp: verificationOtp,
+      }),
+    )
 
-    if (verified.error) {
+    if (verifyError) {
       setIsLoading(false)
-      setError(verified.error.message ?? "Invalid verification code")
+      setError(verifyError.message ?? "Invalid verification code")
       return
     }
 
-    const signInAfterVerify = await authClient.signIn.email({ email, password })
-    if (signInAfterVerify.error) {
+    const { error: signInAfterVerifyError } = await safeAuthCall(() => authClient.signIn.email({ email, password }))
+    if (signInAfterVerifyError) {
       setIsLoading(false)
-      setError(signInAfterVerify.error.message ?? "Email verified. Please sign in again.")
+      setError(signInAfterVerifyError.message ?? "Email verified. Please sign in again.")
       return
     }
 
@@ -129,12 +179,14 @@ export function LoginForm() {
     setIsLoading(true)
     setError(null)
 
-    const signInResult = await authClient.signIn.email({
-      email,
-      password,
-    })
+    const { error: signInError } = await safeAuthCall(() =>
+      authClient.signIn.email({
+        email,
+        password,
+      }),
+    )
 
-    if (!signInResult.error) {
+    if (!signInError) {
       await tryCompletePendingOnboarding(email)
       setIsLoading(false)
       router.push("/dashboard")
@@ -142,7 +194,7 @@ export function LoginForm() {
       return
     }
 
-    if (isEmailNotVerifiedError(signInResult.error)) {
+    if (isEmailNotVerifiedError(signInError)) {
       await beginEmailVerificationFlow(email)
       setIsLoading(false)
       return
@@ -164,35 +216,37 @@ export function LoginForm() {
         return
       }
 
-      setError(signInResult.error.message ?? "Incorrect email or password")
+      setError(signInError.message ?? "Incorrect email or password")
       return
     }
 
     const legacyData = (await legacyResponse.json()) as { valid?: boolean; name?: string }
     if (!legacyData.valid) {
       setIsLoading(false)
-      setError(signInResult.error.message ?? "Incorrect email or password")
+      setError(signInError.message ?? "Incorrect email or password")
       return
     }
 
-    const migrated = await authClient.signUp.email({
-      email,
-      password,
-      name: legacyData.name ?? "SPAY User",
-      callbackURL: "/dashboard",
-    })
+    const { error: migrationError } = await safeAuthCall(() =>
+      authClient.signUp.email({
+        email,
+        password,
+        name: legacyData.name ?? "SPAY User",
+        callbackURL: "/dashboard",
+      }),
+    )
 
-    if (migrated.error) {
-      const retry = await authClient.signIn.email({ email, password })
+    if (migrationError) {
+      const { error: retryError } = await safeAuthCall(() => authClient.signIn.email({ email, password }))
       setIsLoading(false)
 
-      if (retry.error) {
-        if (isEmailNotVerifiedError(retry.error)) {
+      if (retryError) {
+        if (isEmailNotVerifiedError(retryError)) {
           await beginEmailVerificationFlow(email)
           return
         }
 
-        setError(retry.error.message ?? "Account migration failed. Please use Sign up once, then login.")
+        setError(retryError.message ?? "Account migration failed. Please use Sign up once, then login.")
         return
       }
 
@@ -202,16 +256,16 @@ export function LoginForm() {
       return
     }
 
-    const signInAfterMigration = await authClient.signIn.email({ email, password })
-    if (signInAfterMigration.error) {
+    const { error: signInAfterMigrationError } = await safeAuthCall(() => authClient.signIn.email({ email, password }))
+    if (signInAfterMigrationError) {
       setIsLoading(false)
 
-      if (isEmailNotVerifiedError(signInAfterMigration.error)) {
+      if (isEmailNotVerifiedError(signInAfterMigrationError)) {
         await beginEmailVerificationFlow(email)
         return
       }
 
-      setError(signInAfterMigration.error.message ?? "Account created but sign in failed. Please login again.")
+      setError(signInAfterMigrationError.message ?? "Account created but sign in failed. Please login again.")
       return
     }
 
@@ -219,6 +273,20 @@ export function LoginForm() {
     setIsLoading(false)
     router.push("/dashboard")
     router.refresh()
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null)
+    setIsLoading(true)
+
+    const { error: socialError } = await safeAuthCall(() =>
+      authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" }),
+    )
+
+    if (socialError) {
+      setIsLoading(false)
+      setError(socialError.message ?? "Google sign in failed")
+    }
   }
 
   return (
@@ -300,7 +368,7 @@ export function LoginForm() {
       <Button
         className="w-full rounded-none"
         disabled={isLoading}
-        onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" })}
+        onClick={handleGoogleSignIn}
         type="button"
         variant="outline"
       >
