@@ -2,6 +2,10 @@
   "name": "my-v0-project",
   "version": "0.2.0",
   "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "build": "next build",
     "db:generate": "drizzle-kit generate",
