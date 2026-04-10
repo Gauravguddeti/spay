@@ -5,7 +5,6 @@ import { z } from "zod"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { renewalAlerts, subscriptions } from "@/lib/db/schema"
-import { getSubscriptionByIdForOrg } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 import { addDays } from "date-fns"
 import { eq } from "drizzle-orm"
@@ -21,10 +20,13 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    if (!session.user.orgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
-    const organization = await getOrganizationByOwnerId(session.user.id)
+    const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const payload = await request.json()
@@ -36,13 +38,21 @@ export async function POST(request: Request) {
       )
     }
 
-    const subscription = await getSubscriptionByIdForOrg(
-      parsed.data.subscriptionId,
-      organization.id,
-    )
+    const [subscription] = await db
+      .select({
+        id: subscriptions.id,
+        orgId: subscriptions.orgId,
+        nextRenewalDate: subscriptions.nextRenewalDate,
+      })
+      .from(subscriptions)
+      .where(eq(subscriptions.id, parsed.data.subscriptionId))
+      .limit(1)
 
     if (!subscription) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 })
+    }
+    if (subscription.orgId !== session.user.orgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     if (!subscription.nextRenewalDate) {

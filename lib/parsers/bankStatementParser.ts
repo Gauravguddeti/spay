@@ -5,6 +5,8 @@
  * Detects SaaS vendor charges, extracts amounts, converts USD→INR, assigns categories.
  */
 
+import { stripHtmlTags } from "@/lib/security/sanitize"
+
 export type DetectedTransaction = {
   name: string
   vendorKey: string
@@ -188,14 +190,17 @@ export function parseBankStatement(text: string): DetectedTransaction[] {
     seen.add(vendor.key)
 
     results.push({
-      name: vendor.name,
-      vendorKey: vendor.key,
+      name: stripHtmlTags(vendor.name),
+      vendorKey: stripHtmlTags(vendor.key),
       amountInr,
       originalAmount,
       originalCurrency,
-      date: extractDate(line),
+      date: (() => {
+        const extractedDate = extractDate(line)
+        return extractedDate ? stripHtmlTags(extractedDate) : null
+      })(),
       confidence: vendor.confidence,
-      category: vendor.category,
+      category: stripHtmlTags(vendor.category),
     })
   }
 

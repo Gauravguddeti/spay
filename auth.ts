@@ -6,8 +6,13 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 import { db } from "@/lib/db"
-import { createUserWithOrganization, getUserByEmail } from "@/lib/db/queries/users"
+import {
+  createUserWithOrganization,
+  getOrganizationByOwnerId,
+  getUserByEmail,
+} from "@/lib/db/queries/users"
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema"
+import { encryptToken } from "@/lib/security/tokenCrypto"
 import { TEMP_LOCAL_TEST_EMAIL, TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
 
 const credentialsSchema = z.object({
@@ -139,13 +144,45 @@ providers.push(
   }),
 )
 
+const drizzleAdapter = DrizzleAdapter(db, {
+  usersTable: users,
+  accountsTable: accounts,
+  sessionsTable: sessions,
+  verificationTokensTable: verificationTokens,
+})
+
+type LinkAccountInput = Parameters<NonNullable<typeof drizzleAdapter.linkAccount>>[0]
+
+const adapter = {
+  ...drizzleAdapter,
+  async linkAccount(account: LinkAccountInput): Promise<void> {
+    if (!drizzleAdapter.linkAccount) {
+      throw new Error("Adapter linkAccount handler is unavailable")
+    }
+
+    if (account.provider !== "google") {
+      await drizzleAdapter.linkAccount(account)
+      return
+    }
+
+    const encryptedAccessToken = account.access_token
+      ? await encryptToken(account.access_token)
+      : account.access_token
+    const encryptedRefreshToken = account.refresh_token
+      ? await encryptToken(account.refresh_token)
+      : account.refresh_token
+
+    await drizzleAdapter.linkAccount({
+      ...account,
+      access_token: encryptedAccessToken,
+      refresh_token: encryptedRefreshToken,
+    })
+    return
+  },
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
+  adapter,
   session: {
     strategy: "jwt",
   },
@@ -159,6 +196,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Store user ID on first sign-in
       if (user) {
         token.sub = user.id
+      }
+
+      if (token.sub === TEMP_LOCAL_TEST_USER_ID) {
+        token.orgId = "local-demo-org"
+      } else if (token.sub && (user || !token.orgId)) {
+        const organization = await getOrganizationByOwnerId(token.sub)
+        token.orgId = organization?.id ?? null
       }
 
       // Store Google OAuth tokens for Gmail API access
@@ -177,6 +221,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && token.sub) {
         session.user.id = token.sub
       }
+      session.user.orgId = (token.orgId as string | null) ?? null
       if (token.accessToken) {
         session.user.accessToken = token.accessToken as string
         session.user.refreshToken = (token.refreshToken as string) ?? null

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { CheckSquare, Square, Upload } from "lucide-react"
 import { toast } from "sonner"
@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { stripHtmlTags } from "@/lib/security/sanitize"
 
 export type DetectedItem = {
   vendorKey: string
@@ -71,20 +72,32 @@ export function ReviewDetectedSubscriptions({
 }: Props) {
   const router = useRouter()
 
+  const safeItems = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+        vendorKey: stripHtmlTags(item.vendorKey),
+        name: stripHtmlTags(item.name),
+        category: stripHtmlTags(item.category),
+        date: item.date ? stripHtmlTags(item.date) : null,
+      })),
+    [items],
+  )
+
   const [selected, setSelected] = useState<Set<string>>(
-    new Set(items.filter((i) => i.confidence === "high").map((i) => i.vendorKey)),
+    new Set(safeItems.filter((i) => i.confidence === "high").map((i) => i.vendorKey)),
   )
   const [categories, setCategories] = useState<Record<string, string>>(
-    Object.fromEntries(items.map((i) => [i.vendorKey, i.category])),
+    Object.fromEntries(safeItems.map((i) => [i.vendorKey, i.category])),
   )
   const [importing, setImporting] = useState(false)
 
-  const allSelected = selected.size === items.length
+  const allSelected = selected.size === safeItems.length
   const someSelected = selected.size > 0
 
   function toggleAll() {
     setSelected(
-      allSelected ? new Set() : new Set(items.map((i) => i.vendorKey)),
+      allSelected ? new Set() : new Set(safeItems.map((i) => i.vendorKey)),
     )
   }
 
@@ -98,7 +111,7 @@ export function ReviewDetectedSubscriptions({
   }
 
   async function handleImport() {
-    const toImport = items.filter((i) => selected.has(i.vendorKey))
+    const toImport = safeItems.filter((i) => selected.has(i.vendorKey))
     if (toImport.length === 0) return
 
     setImporting(true)
@@ -137,7 +150,7 @@ export function ReviewDetectedSubscriptions({
     }
   }
 
-  if (items.length === 0) {
+  if (safeItems.length === 0) {
     return (
       <div className="rounded-none border border-border/70 bg-card px-6 py-12 text-center shadow-sm">
         <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
@@ -156,7 +169,7 @@ export function ReviewDetectedSubscriptions({
         <div>
           <p className="text-xs font-mono text-muted-foreground">REVIEW DETECTED</p>
           <p className="mt-1 font-serif text-xl">
-            {items.length} subscription{items.length !== 1 ? "s" : ""} found
+            {safeItems.length} subscription{safeItems.length !== 1 ? "s" : ""} found
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -199,7 +212,7 @@ export function ReviewDetectedSubscriptions({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => {
+          {safeItems.map((item) => {
             const isSelected = selected.has(item.vendorKey)
             return (
               <TableRow

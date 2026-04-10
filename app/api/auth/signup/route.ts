@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { createUserWithOrganization, getUserByEmail } from "@/lib/db/queries/users"
+import { getClientIpFromHeaders, takeRateLimitAttempt } from "@/lib/security/inMemoryRateLimit"
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -17,6 +18,18 @@ const signUpSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const ip = getClientIpFromHeaders(request.headers)
+  const rateLimit = takeRateLimitAttempt(`auth:signup:${ip}`)
+
+  if (!rateLimit.allowed) {
+    return new Response(null, {
+      status: 429,
+      headers: {
+        "Retry-After": String(rateLimit.retryAfterSeconds),
+      },
+    })
+  }
+
   try {
     const body = await request.json()
     const parsed = signUpSchema.safeParse(body)
@@ -24,6 +37,31 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Invalid signup payload" },
+        { status: 400 },
+      )
+    }
+
+    if (parsed.data.password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters long" },
+        { status: 400 },
+      )
+    }
+    if (!/[A-Z]/.test(parsed.data.password)) {
+      return NextResponse.json(
+        { error: "Password must include at least one uppercase letter" },
+        { status: 400 },
+      )
+    }
+    if (!/\d/.test(parsed.data.password)) {
+      return NextResponse.json(
+        { error: "Password must include at least one number" },
+        { status: 400 },
+      )
+    }
+    if (!/[^A-Za-z0-9]/.test(parsed.data.password)) {
+      return NextResponse.json(
+        { error: "Password must include at least one special character" },
         { status: 400 },
       )
     }

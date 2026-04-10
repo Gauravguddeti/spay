@@ -24,6 +24,9 @@ export async function PATCH(req: NextRequest) {
   if (!session?.user?.id || !session.user.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!session.user.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const body: unknown = await req.json()
   const parsed = BodySchema.safeParse(body)
@@ -32,7 +35,10 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (parsed.data.action === "update_name") {
-    await updateUserName(session.user.id, parsed.data.name)
+    const updated = await updateUserName(session.user.id, session.user.orgId, parsed.data.name)
+    if (!updated) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     return NextResponse.json({ success: true })
   }
 
@@ -51,7 +57,10 @@ export async function PATCH(req: NextRequest) {
   }
 
   const newHash = await bcrypt.hash(parsed.data.newPassword, 12)
-  await updateUserPassword(session.user.id, newHash)
+  const updated = await updateUserPassword(session.user.id, session.user.orgId, newHash)
+  if (!updated) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   return NextResponse.json({ success: true })
 }

@@ -1,14 +1,16 @@
 import * as Sentry from "@sentry/nextjs"
 import { NextResponse } from "next/server"
+import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { auth } from "@/auth"
+import { db } from "@/lib/db"
 import {
   deleteSubscription,
-  getSubscriptionByIdForOrg,
   updateSubscription,
 } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
+import { subscriptions } from "@/lib/db/schema"
 
 const updateSubscriptionSchema = z.object({
   name: z.string().min(1).optional(),
@@ -30,14 +32,17 @@ async function getOrgForRequest() {
   if (!session?.user?.id) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }
   }
-
-  const organization = await getOrganizationByOwnerId(session.user.id)
-
-  if (!organization) {
-    return { error: NextResponse.json({ error: "Organization not found" }, { status: 404 }) }
+  if (!session.user.orgId) {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
   }
 
-  return { organization }
+  const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
+
+  if (!organization) {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
+  }
+
+  return { sessionOrgId: session.user.orgId }
 }
 
 export async function PATCH(
@@ -51,10 +56,17 @@ export async function PATCH(
     }
 
     const { id } = await context.params
-    const existing = await getSubscriptionByIdForOrg(id, orgResult.organization.id)
+    const [existing] = await db
+      .select({ id: subscriptions.id, orgId: subscriptions.orgId })
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id))
+      .limit(1)
 
     if (!existing) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 })
+    }
+    if (existing.orgId !== orgResult.sessionOrgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const payload = await request.json()
@@ -67,7 +79,7 @@ export async function PATCH(
       )
     }
 
-    const updated = await updateSubscription(id, orgResult.organization.id, {
+    const updated = await updateSubscription(id, orgResult.sessionOrgId, {
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
       ...(parsed.data.category !== undefined ? { category: parsed.data.category } : {}),
       ...(parsed.data.amountInr !== undefined ? { amountInr: parsed.data.amountInr.toFixed(2) } : {}),
@@ -115,13 +127,20 @@ export async function DELETE(
     }
 
     const { id } = await context.params
-    const existing = await getSubscriptionByIdForOrg(id, orgResult.organization.id)
+    const [existing] = await db
+      .select({ id: subscriptions.id, orgId: subscriptions.orgId })
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id))
+      .limit(1)
 
     if (!existing) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 })
     }
+    if (existing.orgId !== orgResult.sessionOrgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
-    await deleteSubscription(id, orgResult.organization.id)
+    await deleteSubscription(id, orgResult.sessionOrgId)
     return NextResponse.json({ success: true })
   } catch (error) {
     Sentry.captureException(error)

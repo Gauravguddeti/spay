@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { differenceInDays, addDays } from "date-fns"
 import { db } from "@/lib/db"
 import { organizations, subscriptions, users } from "@/lib/db/schema"
-import { eq, and, gte, lte } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { sendWeeklyDigest } from "@/lib/email/sendDigest"
 
 export const runtime = "nodejs"
 
 export async function GET(req: NextRequest) {
-  // Protect with CRON_SECRET
+  // Protect with CRON_SECRET and Vercel cron header.
   const authHeader = req.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const cronHeader = req.headers.get("x-vercel-cron")
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}` || !cronHeader) {
+    return new Response(null, { status: 401 })
   }
 
   const appUrl = process.env.NEXTAUTH_URL ?? "https://spay.app"
@@ -82,12 +84,14 @@ export async function GET(req: NextRequest) {
 
         results.push({ orgId: org.id, status: "sent" })
       } catch (err) {
-        results.push({ orgId: org.id, status: `error: ${String(err)}` })
+        console.error(err)
+        results.push({ orgId: org.id, status: "error" })
       }
     }
 
     return NextResponse.json({ processed: results.length, results })
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    console.error(error)
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }

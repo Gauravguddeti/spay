@@ -9,7 +9,6 @@ import {
   deleteAllSubscriptionsByOrg,
   deleteUserAccount,
   getOrganizationByOwnerId,
-  updateOrganizationName,
 } from "@/lib/db/queries/users"
 import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
 
@@ -49,9 +48,12 @@ export async function GET() {
   if (session.user.id === TEMP_LOCAL_TEST_USER_ID) {
     return NextResponse.json({ organization: buildLocalDemoOrganization() })
   }
+  if (!session.user.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
-  const organization = await getOrganizationByOwnerId(session.user.id)
-  if (!organization) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
+  if (!organization) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   return NextResponse.json({ organization })
 }
@@ -81,9 +83,12 @@ export async function PATCH(req: NextRequest) {
       }),
     })
   }
+  if (!session.user.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
-  const organization = await getOrganizationByOwnerId(session.user.id)
-  if (!organization) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
+  if (!organization) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const updateData: Record<string, unknown> = {}
   if (parsed.data.name !== undefined) updateData.name = parsed.data.name
@@ -114,17 +119,26 @@ export async function DELETE(req: NextRequest) {
   if (session.user.id === TEMP_LOCAL_TEST_USER_ID) {
     return NextResponse.json({ success: true })
   }
+  if (!session.user.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
-  const organization = await getOrganizationByOwnerId(session.user.id)
-  if (!organization) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
+  if (!organization) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   if (action === "delete_subscriptions") {
-    await deleteAllSubscriptionsByOrg(organization.id)
+    const deleted = await deleteAllSubscriptionsByOrg(organization.id, session.user.id)
+    if (!deleted) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     return NextResponse.json({ success: true })
   }
 
   if (action === "delete_account") {
-    await deleteUserAccount(session.user.id)
+    const deleted = await deleteUserAccount(session.user.id, organization.id)
+    if (!deleted) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
     return NextResponse.json({ success: true })
   }
 

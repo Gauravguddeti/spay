@@ -24,10 +24,13 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!session.user.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
-  const organization = await getOrganizationByOwnerId(session.user.id)
+  const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
   if (!organization) {
-    return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const body: unknown = await req.json()

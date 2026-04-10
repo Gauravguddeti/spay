@@ -25,10 +25,13 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    if (!session.user.orgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
-    const organization = await getOrganizationByOwnerId(session.user.id)
+    const organization = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const payload = await request.json()
@@ -57,6 +60,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ subscription: created }, { status: 201 })
   } catch (error) {
     Sentry.captureException(error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }

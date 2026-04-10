@@ -19,10 +19,13 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!session.user.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
-  const org = await getOrganizationByOwnerId(session.user.id)
+  const org = await getOrganizationByOwnerId(session.user.id, session.user.orgId)
   if (!org) {
-    return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const subs = await getSubscriptionsByOrg(org.id)
