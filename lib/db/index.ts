@@ -1,5 +1,6 @@
-import { neon } from "@neondatabase/serverless"
-import { drizzle } from "drizzle-orm/neon-http"
+import { Pool, neonConfig } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-serverless"
+import ws from "ws"
 
 import * as schema from "@/lib/db/schema"
 
@@ -7,6 +8,8 @@ const connectionString =
   process.env.DATABASE_URL ??
   "postgresql://placeholder:placeholder@localhost:5432/spay"
 
-const client = neon(connectionString)
+neonConfig.webSocketConstructor = ws
 
-export const db = drizzle(client, { schema })
+const pool = new Pool({ connectionString })
+
+export const db = drizzle(pool, { schema })
