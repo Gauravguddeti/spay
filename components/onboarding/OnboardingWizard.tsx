@@ -14,13 +14,11 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
   const [step, setStep] = useState(1)
   const [workspaceName, setWorkspaceName] = useState(orgName)
   const [alerts, setAlerts] = useState({ days30: true, days7: true, days1: false })
-  const [whatsapp, setWhatsapp] = useState("")
   const [completing, setCompleting] = useState(false)
 
   async function completeOnboarding() {
     setCompleting(true)
     try {
-      const normalizedWhatsapp = whatsapp.trim().replace(/\s+/g, "")
       const response = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: {
@@ -28,7 +26,6 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
         },
         body: JSON.stringify({
           organizationName: workspaceName.trim(),
-          whatsappNumber: normalizedWhatsapp ? normalizedWhatsapp : null,
           alertPreferences: alerts,
         }),
       })
@@ -186,19 +183,6 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
                   <Switch
                     checked={alerts.days7}
                     onCheckedChange={(v) => setAlerts((a) => ({ ...a, days7: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    Get WhatsApp reminders too{" "}
-                    <span className="text-muted-foreground font-normal">(optional)</span>
-                  </label>
-                  <input
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    type="tel"
-                    className="w-full rounded-none border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary transition-colors"
                   />
                 </div>
               </div>

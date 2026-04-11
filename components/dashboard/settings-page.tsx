@@ -33,7 +33,6 @@ type AlertPreferences = { days30: boolean; days7: boolean; days1: boolean }
 type OrgData = {
   id?: string
   name: string
-  whatsappNumber: string | null
   alertPreferences: AlertPreferences | null
 }
 
@@ -60,7 +59,6 @@ export function SettingsPageClient() {
 
   // ── Notifications state ────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
-  const [whatsappNumber, setWhatsappNumber] = useState("")
   const [prefs, setPrefs] = useState<AlertPreferences>(DEFAULT_PREFS)
   const [savingNotifs, setSavingNotifs] = useState(false)
 
@@ -79,7 +77,6 @@ export function SettingsPageClient() {
         if (organization) {
           setOrgName(organization.name ?? "")
           setOrgId(organization.id ?? "")
-          setWhatsappNumber(organization.whatsappNumber ?? "")
           setPrefs(organization.alertPreferences ?? DEFAULT_PREFS)
         }
       })
@@ -144,7 +141,7 @@ export function SettingsPageClient() {
       const res = await fetch("/api/organizations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ whatsappNumber: whatsappNumber.trim() || null, alertPreferences: prefs }),
+        body: JSON.stringify({ alertPreferences: prefs }),
       })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) { toast.error(data.error ?? "Failed to save"); return }
@@ -345,7 +342,7 @@ export function SettingsPageClient() {
             <CardHeader>
               <CardTitle className="text-lg">Notifications</CardTitle>
               <CardDescription>
-                Receive WhatsApp alerts before your subscriptions renew
+                Manage renewal reminder preferences
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -357,21 +354,6 @@ export function SettingsPageClient() {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="whatsapp-number">WhatsApp Number</Label>
-                    <Input
-                      className="max-w-xs"
-                      id="whatsapp-number"
-                      onChange={(e) => setWhatsappNumber(e.target.value)}
-                      placeholder="+919876543210"
-                      type="tel"
-                      value={whatsappNumber}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter in international format (e.g. +91 for India)
-                    </p>
-                  </div>
-
                   <div className="space-y-3">
                     <p className="text-sm font-medium">Alert me before renewal:</p>
                     {(
