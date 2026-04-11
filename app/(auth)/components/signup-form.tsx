@@ -143,29 +143,52 @@ export function SignupForm() {
     )
   }
 
-  async function completeOnboarding(organizationName: string) {
+  async function saveOrganizationSetup(organizationName: string) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const bootstrapResponse = await fetch("/api/onboarding/complete", {
-        method: "POST",
+      const setupResponse = await fetch("/api/organizations", {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ organizationName }),
+        body: JSON.stringify({
+          name: organizationName,
+        }),
       })
 
-      if (bootstrapResponse.ok) {
+      if (setupResponse.ok) {
         return { ok: true as const, status: 200 }
       }
 
-      if (bootstrapResponse.status === 401 && attempt < 2) {
+      if (setupResponse.status === 401 && attempt < 2) {
         await new Promise((resolve) => setTimeout(resolve, 700))
         continue
       }
 
-      return { ok: false as const, status: bootstrapResponse.status }
+      return { ok: false as const, status: setupResponse.status }
     }
 
     return { ok: false as const, status: 500 }
+  }
+
+  async function completeOnboardingAfterSignup(organizationName: string) {
+    const setupResult = await saveOrganizationSetup(organizationName)
+    if (setupResult.ok) {
+      localStorage.removeItem(PENDING_ONBOARDING_KEY)
+    }
+    return setupResult
+  }
+
+  async function beginVerificationWithoutResend(targetEmail: string) {
+    const normalizedEmail = normalizeEmail(targetEmail)
+    if (!normalizedEmail) {
+      setError("Enter your email first")
+      return
+    }
+
+    // Neon signup already sends one verification OTP. Avoid sending a duplicate here.
+    setRequiresEmailVerification(true)
+    setLastOtpSentAt(Date.now())
+    setError("Account created. Enter the verification code from the email we just sent.")
   }
 
   async function beginEmailVerificationFlow(targetEmail: string, options?: { forceSend?: boolean }) {
@@ -266,8 +289,7 @@ export function SignupForm() {
       return
     }
 
-    await completeOnboarding(pendingVerification.organizationName)
-    localStorage.removeItem(PENDING_ONBOARDING_KEY)
+    await completeOnboardingAfterSignup(pendingVerification.organizationName)
 
     setRequiresEmailVerification(false)
     setPendingVerification(null)
@@ -312,10 +334,23 @@ export function SignupForm() {
       return
     }
 
-    const onboardingResult = await completeOnboarding(normalizedOrganizationName)
+    const pending = {
+      email: normalizedEmail,
+      password: payload.password,
+      organizationName: normalizedOrganizationName,
+    }
+
+    localStorage.setItem(
+      PENDING_ONBOARDING_KEY,
+      JSON.stringify({
+        email: pending.email,
+        organizationName: pending.organizationName,
+      }),
+    )
+
+    const onboardingResult = await completeOnboardingAfterSignup(normalizedOrganizationName)
 
     if (onboardingResult.ok) {
-      localStorage.removeItem(PENDING_ONBOARDING_KEY)
       setIsLoading(false)
       router.push("/dashboard")
       router.refresh()
@@ -325,22 +360,8 @@ export function SignupForm() {
     // Neon can require email verification before creating a logged-in session.
     // Persist onboarding intent in case user leaves before completing OTP verification.
     if (onboardingResult.status === 401) {
-      const pending = {
-        email: normalizedEmail,
-        password: payload.password,
-        organizationName: normalizedOrganizationName,
-      }
-
-      localStorage.setItem(
-        PENDING_ONBOARDING_KEY,
-        JSON.stringify({
-          email: pending.email,
-          organizationName: pending.organizationName,
-        }),
-      )
-
       setPendingVerification(pending)
-      await beginEmailVerificationFlow(pending.email, { forceSend: true })
+      await beginVerificationWithoutResend(pending.email)
       setIsLoading(false)
       return
     }

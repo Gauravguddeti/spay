@@ -13,14 +13,30 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [workspaceName, setWorkspaceName] = useState(orgName)
-  const [alerts, setAlerts] = useState({ days30: true, days7: true })
+  const [alerts, setAlerts] = useState({ days30: true, days7: true, days1: false })
   const [whatsapp, setWhatsapp] = useState("")
   const [completing, setCompleting] = useState(false)
 
   async function completeOnboarding() {
     setCompleting(true)
     try {
-      await fetch("/api/onboarding/complete", { method: "POST" })
+      const normalizedWhatsapp = whatsapp.trim().replace(/\s+/g, "")
+      const response = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationName: workspaceName.trim(),
+          whatsappNumber: normalizedWhatsapp ? normalizedWhatsapp : null,
+          alertPreferences: alerts,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to complete onboarding")
+      }
+
       toast.success("You're all set! Welcome to SPAY 🎉")
       router.refresh()
     } catch {

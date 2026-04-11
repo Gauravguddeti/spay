@@ -43,7 +43,7 @@ export function LoginForm() {
     }
   }, [])
 
-  async function tryCompletePendingOnboarding(currentEmail: string) {
+  async function tryApplyPendingOrganizationSetup(currentEmail: string) {
     const raw = localStorage.getItem(PENDING_ONBOARDING_KEY)
     if (!raw) {
       return
@@ -59,15 +59,15 @@ export function LoginForm() {
         return
       }
 
-      const bootstrapResponse = await fetch("/api/onboarding/complete", {
-        method: "POST",
+      const setupResponse = await fetch("/api/organizations", {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ organizationName }),
+        body: JSON.stringify({ name: organizationName }),
       })
 
-      if (bootstrapResponse.ok) {
+      if (setupResponse.ok) {
         localStorage.removeItem(PENDING_ONBOARDING_KEY)
       }
     } catch {
@@ -257,7 +257,7 @@ export function LoginForm() {
       return
     }
 
-    await tryCompletePendingOnboarding(normalizedEmail)
+    await tryApplyPendingOrganizationSetup(normalizedEmail)
     setRequiresEmailVerification(false)
     setVerificationOtp("")
     setIsLoading(false)
@@ -286,7 +286,7 @@ export function LoginForm() {
     )
 
     if (!signInError) {
-      await tryCompletePendingOnboarding(normalizedEmail)
+      await tryApplyPendingOrganizationSetup(normalizedEmail)
       setIsLoading(false)
       router.push("/dashboard")
       router.refresh()
@@ -367,7 +367,7 @@ export function LoginForm() {
         return
       }
 
-      await tryCompletePendingOnboarding(normalizedEmail)
+      await tryApplyPendingOrganizationSetup(normalizedEmail)
       router.push("/dashboard")
       router.refresh()
       return
@@ -392,7 +392,7 @@ export function LoginForm() {
       return
     }
 
-    await tryCompletePendingOnboarding(normalizedEmail)
+    await tryApplyPendingOrganizationSetup(normalizedEmail)
     setIsLoading(false)
     router.push("/dashboard")
     router.refresh()
