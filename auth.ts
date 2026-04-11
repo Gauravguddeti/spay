@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { eq } from "drizzle-orm"
 
-import { getOrganizationByOwnerId, getUserByEmail } from "@/lib/db/queries/users"
+import { getOrganizationByOwnerId, getUserByEmail, getUserById } from "@/lib/db/queries/users"
 import { organizations, users } from "@/lib/db/schema"
 import { neonAuth } from "@/lib/auth/server"
 
@@ -21,20 +21,48 @@ async function ensureAppUserAndOrg(authUser: {
   name?: string | null
   image?: string | null
 }) {
-  let user = await getUserByEmail(authUser.email)
+  // Resolve by Neon user id first to avoid duplicate PK inserts when email changes.
+  let user = await getUserById(authUser.id)
+  if (!user) {
+    user = await getUserByEmail(authUser.email)
+  }
 
   if (!user) {
-    const [createdUser] = await db
-      .insert(users)
-      .values({
-        id: authUser.id,
-        email: authUser.email,
-        name: authUser.name ?? "SPAY User",
-        image: authUser.image ?? null,
-      })
-      .returning()
-    user = createdUser
-  } else if ((user.name ?? "") !== (authUser.name ?? "") || (user.image ?? null) !== (authUser.image ?? null)) {
+    try {
+      const [createdUser] = await db
+        .insert(users)
+        .values({
+          id: authUser.id,
+          email: authUser.email,
+          name: authUser.name ?? "SPAY User",
+          image: authUser.image ?? null,
+        })
+        .returning()
+      user = createdUser
+    } catch (error) {
+      const recovered = (await getUserById(authUser.id)) ?? (await getUserByEmail(authUser.email))
+      if (!recovered) {
+        throw error
+      }
+      user = recovered
+    }
+  }
+
+  if (user.email !== authUser.email) {
+    const emailOwner = await getUserByEmail(authUser.email)
+    if (!emailOwner || emailOwner.id === user.id) {
+      const [updatedEmail] = await db
+        .update(users)
+        .set({ email: authUser.email })
+        .where(eq(users.id, user.id))
+        .returning()
+      user = updatedEmail ?? user
+    } else {
+      user = emailOwner
+    }
+  }
+
+  if ((user.name ?? "") !== (authUser.name ?? "") || (user.image ?? null) !== (authUser.image ?? null)) {
     const [updated] = await db
       .update(users)
       .set({

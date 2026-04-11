@@ -15,6 +15,11 @@ export async function getUserByEmail(email: string) {
   return user ?? null
 }
 
+export async function getUserById(userId: string) {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  return user ?? null
+}
+
 export async function getOrganizationByOwnerId(ownerId: string, orgId?: string) {
   const whereClause = orgId
     ? and(eq(organizations.ownerId, ownerId), eq(organizations.id, orgId))
