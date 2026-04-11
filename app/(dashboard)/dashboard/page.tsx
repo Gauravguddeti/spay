@@ -44,6 +44,16 @@ const severityStyles = {
   },
 }
 
+const inrFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+})
+
+function formatInr(value: number): string {
+  return inrFormatter.format(Math.max(0, value))
+}
+
 function urgencyClass(daysLeft: number): string {
   if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
   if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
@@ -61,6 +71,13 @@ export default async function DashboardPage() {
 
   let upcomingRenewals: Awaited<ReturnType<typeof getUpcomingRenewals>> = []
   let allSubs: Awaited<ReturnType<typeof getSubscriptionsByOrg>> = []
+  let stats: Awaited<ReturnType<typeof getDashboardStats>> = {
+    totalMonthlySpendInr: 0,
+    activeSubscriptionsCount: 0,
+    renewingThisMonthCount: 0,
+    potentialSavingsCount: 0,
+    potentialSavingsInr: 0,
+  }
   let orgName = "My Workspace"
   let showOnboarding = false
 
@@ -70,9 +87,10 @@ export default async function DashboardPage() {
       if (!organization) redirect("/login")
 
       orgName = organization.name
-      ;[upcomingRenewals, allSubs] = await Promise.all([
+      ;[upcomingRenewals, allSubs, stats] = await Promise.all([
         getUpcomingRenewals(organization.id),
         getSubscriptionsByOrg(organization.id),
+        getDashboardStats(organization.id),
       ])
 
       showOnboarding = !organization.onboardingCompleted && allSubs.length === 0
@@ -114,6 +132,58 @@ export default async function DashboardPage() {
               Export CSV
             </a>
           )}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Card className="rounded-none border-border/70">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
+                Monthly Spend
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-serif text-2xl">{formatInr(stats.totalMonthlySpendInr)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Estimated normalized monthly burn</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-none border-border/70">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
+                Active Subscriptions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-serif text-2xl">{stats.activeSubscriptionsCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Currently billing tools</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-none border-border/70">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
+                Renewing Soon
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-serif text-2xl">{stats.renewingThisMonthCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Due in the next 30 days</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-none border-border/70">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
+                Potential Savings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-serif text-2xl">{formatInr(stats.potentialSavingsInr)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {stats.potentialSavingsCount} underused subscription{stats.potentialSavingsCount === 1 ? "" : "s"}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Conversational AI Insights */}
@@ -193,11 +263,7 @@ export default async function DashboardPage() {
                       <p className="truncate font-medium text-sm">{renewal.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {format(renewalDate, "dd MMM yyyy")} ·{" "}
-                        {new Intl.NumberFormat("en-IN", {
-                          style: "currency",
-                          currency: "INR",
-                          maximumFractionDigits: 0,
-                        }).format(Number(renewal.amountInr))}
+                        {formatInr(Number(renewal.amountInr))}
                       </p>
                     </div>
                     <Badge className={urgencyClass(daysLeft)} variant="outline">

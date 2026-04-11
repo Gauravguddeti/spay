@@ -12,6 +12,22 @@ import {
 } from "@/lib/integrations/gmail"
 import { decryptTokenWithCompatibility, encryptToken } from "@/lib/security/tokenCrypto"
 
+function isGmailReconnectError(error: unknown): boolean {
+  const err = error as { code?: string; message?: string }
+  if (err?.code === "GMAIL_AUTH_EXPIRED") {
+    return true
+  }
+
+  const message = String(err?.message ?? "").toLowerCase()
+  return (
+    message.includes("gmail list failed: 401") ||
+    message.includes("invalid credentials") ||
+    message.includes("invalid token") ||
+    message.includes("invalid_grant") ||
+    message.includes("insufficient authentication scopes")
+  )
+}
+
 export async function POST() {
   try {
     const session = await auth()
@@ -22,32 +38,47 @@ export async function POST() {
 
     const email = session.user.email.trim().toLowerCase()
 
-    const neonAccountResult = await db.execute(sql`
-      select
-        a.id,
-        a."userId",
-        a."accountId",
-        a."accessToken",
-        a."refreshToken",
-        a."accessTokenExpiresAt"
-      from neon_auth.account a
-      join neon_auth."user" u on u.id = a."userId"
-      where lower(u.email) = ${email}
-        and a."providerId" = 'google'
-      order by a."updatedAt" desc
-      limit 1
-    `)
-
-    const neonAccount = (neonAccountResult as unknown as {
-      rows?: Array<{
+    let neonAccount:
+      | {
         id: string
         userId: string
         accountId: string
         accessToken: string | null
         refreshToken: string | null
         accessTokenExpiresAt: Date | string | null
-      }>
-    }).rows?.[0]
+      }
+      | undefined
+
+    try {
+      const neonAccountResult = await db.execute(sql`
+        select
+          a.id,
+          a."userId",
+          a."accountId",
+          a."accessToken",
+          a."refreshToken",
+          a."accessTokenExpiresAt"
+        from neon_auth.account a
+        join neon_auth."user" u on u.id = a."userId"
+        where lower(u.email) = ${email}
+          and a."providerId" = 'google'
+        order by a."updatedAt" desc
+        limit 1
+      `)
+
+      neonAccount = (neonAccountResult as unknown as {
+        rows?: Array<{
+          id: string
+          userId: string
+          accountId: string
+          accessToken: string | null
+          refreshToken: string | null
+          accessTokenExpiresAt: Date | string | null
+        }>
+      }).rows?.[0]
+    } catch (neonLookupError) {
+      Sentry.captureException(neonLookupError)
+    }
 
     if (neonAccount?.accessToken) {
       const accessTokenExpiresAt = neonAccount.accessTokenExpiresAt
@@ -82,7 +113,15 @@ export async function POST() {
         throw refreshError
       }
 
-      const detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+      let detected
+      try {
+        detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+      } catch (scanError) {
+        if (isGmailReconnectError(scanError)) {
+          return NextResponse.json({ error: "GMAIL_AUTH_EXPIRED" }, { status: 401 })
+        }
+        throw scanError
+      }
       return NextResponse.json({ subscriptions: detected })
     }
 
@@ -184,7 +223,15 @@ export async function POST() {
       throw refreshError
     }
 
-    const detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+    let detected
+    try {
+      detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+    } catch (scanError) {
+      if (isGmailReconnectError(scanError)) {
+        return NextResponse.json({ error: "GMAIL_AUTH_EXPIRED" }, { status: 401 })
+      }
+      throw scanError
+    }
 
     return NextResponse.json({ subscriptions: detected })
   } catch (error) {

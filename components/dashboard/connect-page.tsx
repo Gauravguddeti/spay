@@ -41,6 +41,7 @@ function confidenceClass(score: number): string {
 
 export function ConnectPageClient({ gmailEnabled = true, initialConnected = false }: { gmailEnabled?: boolean, initialConnected?: boolean }) {
   const [isGmailConnected, setIsGmailConnected] = useState(initialConnected)
+  const [hasAutoScanned, setHasAutoScanned] = useState(false)
 
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -71,14 +72,19 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
 
       if (!res.ok) {
         if (data.error === "GMAIL_AUTH_EXPIRED" || data.error === "GMAIL_NOT_CONNECTED") {
+          setIsGmailConnected(false)
+          setScanError("Gmail connection expired. Please reconnect your account.")
           toast.info("Refreshing Gmail connection... you will return here automatically.")
           startGoogleConnect("/dashboard/connect?rescan=1")
         } else {
-          toast.error(data.message ?? data.error ?? "Scan failed")
+          const message = data.message ?? data.error ?? "Scan failed"
+          setScanError(message)
+          toast.error(message)
         }
         return
       }
 
+      setScanError(null)
       setDetected(data.subscriptions ?? [])
       const preSelected = new Set(
         (data.subscriptions ?? []).filter((s) => s.confidence >= 0.9).map((s) => s.vendorKey),
@@ -95,10 +101,11 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
   }, [])
 
   useEffect(() => {
-    if (isGmailConnected && detected === null && !scanning) {
+    if (isGmailConnected && detected === null && !scanning && !hasAutoScanned) {
+      setHasAutoScanned(true)
       void handleScan()
     }
-  }, [detected, handleScan, isGmailConnected, scanning])
+  }, [detected, handleScan, hasAutoScanned, isGmailConnected, scanning])
 
   function toggleVendor(key: string) {
     setSelected((prev) => {
@@ -203,13 +210,24 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
           ) : !isGmailConnected ? (
             <Button
               className="rounded-none"
-              onClick={() => startGoogleConnect("/dashboard/connect")}
+              onClick={() => {
+                setScanError(null)
+                startGoogleConnect("/dashboard/connect")
+              }}
             >
               <PlugZap className="mr-2 h-4 w-4" />
               Connect Gmail
             </Button>
           ) : (
-            <Button className="rounded-none" disabled={scanning} onClick={handleScan} variant="outline">
+            <Button
+              className="rounded-none"
+              disabled={scanning}
+              onClick={() => {
+                setScanError(null)
+                void handleScan()
+              }}
+              variant="outline"
+            >
               {scanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
               {scanning ? "Scanning your inbox for subscriptions..." : "Re-scan inbox"}
             </Button>
