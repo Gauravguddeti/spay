@@ -20,6 +20,7 @@ type SignupPayload = {
 type AuthErrorLike = {
   code?: string
   message?: string
+  status?: number
 }
 
 type PendingVerification = {
@@ -64,10 +65,24 @@ export function SignupForm() {
     }
 
     if (typeof error === "object") {
-      const maybe = error as { code?: unknown; message?: unknown }
+      const maybe = error as {
+        code?: unknown
+        message?: unknown
+        status?: unknown
+        statusCode?: unknown
+      }
+
+      const status =
+        typeof maybe.status === "number"
+          ? maybe.status
+          : typeof maybe.statusCode === "number"
+            ? maybe.statusCode
+            : undefined
+
       return {
         code: typeof maybe.code === "string" ? maybe.code : undefined,
         message: typeof maybe.message === "string" ? maybe.message : "Something went wrong",
+        status,
       }
     }
 
@@ -99,8 +114,33 @@ export function SignupForm() {
     const maybe = authError as AuthErrorLike | null
     const code = maybe?.code?.toLowerCase() ?? ""
     const message = maybe?.message?.toLowerCase() ?? ""
+    const status = maybe?.status
 
-    return code.includes("email_not_verified") || message.includes("email not verified")
+    if (code.includes("email_not_verified") || code.includes("verify") || code.includes("forbidden")) {
+      return true
+    }
+
+    if (message.includes("email not verified") || (message.includes("verify") && message.includes("email"))) {
+      return true
+    }
+
+    return status === 403
+  }
+
+  function isAccountAlreadyExistsError(authError: unknown) {
+    const maybe = authError as AuthErrorLike | null
+    const code = maybe?.code?.toLowerCase() ?? ""
+    const message = maybe?.message?.toLowerCase() ?? ""
+
+    return (
+      code.includes("already") ||
+      code.includes("exists") ||
+      code.includes("duplicate") ||
+      code.includes("user_exists") ||
+      message.includes("already") ||
+      message.includes("exists") ||
+      message.includes("duplicate")
+    )
   }
 
   async function completeOnboarding(organizationName: string) {
@@ -262,6 +302,12 @@ export function SignupForm() {
 
     if (signUpError) {
       setIsLoading(false)
+
+      if (isAccountAlreadyExistsError(signUpError)) {
+        setError("An account with this email already exists. Sign in and verify email there if needed.")
+        return
+      }
+
       setError(signUpError.message ?? "Could not create account")
       return
     }

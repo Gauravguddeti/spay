@@ -16,6 +16,7 @@ const OTP_RESEND_COOLDOWN_MS = 45_000
 type AuthErrorLike = {
   code?: string
   message?: string
+  status?: number
 }
 
 export function LoginForm() {
@@ -84,10 +85,24 @@ export function LoginForm() {
     }
 
     if (typeof error === "object") {
-      const maybe = error as { code?: unknown; message?: unknown }
+      const maybe = error as {
+        code?: unknown
+        message?: unknown
+        status?: unknown
+        statusCode?: unknown
+      }
+
+      const status =
+        typeof maybe.status === "number"
+          ? maybe.status
+          : typeof maybe.statusCode === "number"
+            ? maybe.statusCode
+            : undefined
+
       return {
         code: typeof maybe.code === "string" ? maybe.code : undefined,
         message: typeof maybe.message === "string" ? maybe.message : "Something went wrong",
+        status,
       }
     }
 
@@ -123,8 +138,34 @@ export function LoginForm() {
     const maybe = authError as AuthErrorLike | null
     const code = maybe?.code?.toLowerCase() ?? ""
     const message = maybe?.message?.toLowerCase() ?? ""
+    const status = maybe?.status
 
-    return code.includes("email_not_verified") || message.includes("email not verified")
+    if (code.includes("email_not_verified") || code.includes("verify") || code.includes("forbidden")) {
+      return true
+    }
+
+    if (message.includes("email not verified") || (message.includes("verify") && message.includes("email"))) {
+      return true
+    }
+
+    // Neon Auth can return 403 for sign-in when verification is required.
+    return status === 403
+  }
+
+  function isAccountAlreadyExistsError(authError: unknown) {
+    const maybe = authError as AuthErrorLike | null
+    const code = maybe?.code?.toLowerCase() ?? ""
+    const message = maybe?.message?.toLowerCase() ?? ""
+
+    return (
+      code.includes("already") ||
+      code.includes("exists") ||
+      code.includes("duplicate") ||
+      code.includes("user_exists") ||
+      message.includes("already") ||
+      message.includes("exists") ||
+      message.includes("duplicate")
+    )
   }
 
   async function beginEmailVerificationFlow(targetEmail: string, options?: { forceSend?: boolean }) {
@@ -231,6 +272,12 @@ export function LoginForm() {
 
     const normalizedEmail = normalizeEmail(email)
 
+    if (requiresEmailVerification) {
+      setIsLoading(false)
+      setError("Email is not verified. Enter the code from your inbox, then click Verify Email.")
+      return
+    }
+
     const { error: signInError } = await safeAuthCall(() =>
       authClient.signIn.email({
         email: normalizedEmail,
@@ -295,6 +342,12 @@ export function LoginForm() {
     )
 
     if (migrationError) {
+      if (isAccountAlreadyExistsError(migrationError)) {
+        setIsLoading(false)
+        await beginEmailVerificationFlow(normalizedEmail)
+        return
+      }
+
       const { error: retryError } = await safeAuthCall(() =>
         authClient.signIn.email({ email: normalizedEmail, password }),
       )
@@ -435,8 +488,8 @@ export function LoginForm() {
         </div>
       ) : null}
 
-      <Button className="w-full rounded-none" disabled={isLoading} type="submit">
-        {isLoading ? "Signing in..." : "Sign In"}
+      <Button className="w-full rounded-none" disabled={isLoading || requiresEmailVerification} type="submit">
+        {isLoading ? "Signing in..." : requiresEmailVerification ? "Awaiting verification..." : "Sign In"}
       </Button>
 
       <Button
