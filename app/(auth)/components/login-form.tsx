@@ -451,6 +451,11 @@ export function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
           placeholder="At least 8 characters"
         />
+          <p className="text-right text-xs">
+            <Link className="text-primary hover:underline" href="/forgot-password">
+              Forgot password?
+            </Link>
+          </p>
       </div>
 
       {requiresEmailVerification ? (
