@@ -20,6 +20,13 @@ type DetectedSubscription = {
   confidence: number
 }
 
+const GOOGLE_GMAIL_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/gmail.readonly",
+]
+
 function confidenceLabel(score: number): string {
   if (score >= 0.9) return "High"
   if (score >= 0.7) return "Medium"
@@ -42,6 +49,15 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
   const [importing, setImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
 
+  function startGoogleConnect(callbackURL: string) {
+    void authClient.signIn.social({
+      provider: "google",
+      callbackURL,
+      newUserCallbackURL: callbackURL,
+      scopes: GOOGLE_GMAIL_SCOPES,
+    })
+  }
+
   const handleScan = useCallback(async () => {
     setScanning(true)
     setScanError(null)
@@ -55,8 +71,8 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
 
       if (!res.ok) {
         if (data.error === "GMAIL_AUTH_EXPIRED" || data.error === "GMAIL_NOT_CONNECTED") {
-          toast.error("Your Gmail connection has expired or is missing. Please reconnect.")
-          setIsGmailConnected(false)
+          toast.info("Refreshing Gmail connection... you will return here automatically.")
+          startGoogleConnect("/dashboard/connect?rescan=1")
         } else {
           toast.error(data.message ?? data.error ?? "Scan failed")
         }
@@ -187,7 +203,7 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
           ) : !isGmailConnected ? (
             <Button
               className="rounded-none"
-              onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/dashboard/connect" })}
+              onClick={() => startGoogleConnect("/dashboard/connect")}
             >
               <PlugZap className="mr-2 h-4 w-4" />
               Connect Gmail

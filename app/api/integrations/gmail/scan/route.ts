@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs"
 import { NextResponse } from "next/server"
+import { sql } from "drizzle-orm"
 
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
@@ -15,10 +16,79 @@ export async function POST() {
   try {
     const session = await auth()
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const email = session.user.email.trim().toLowerCase()
+
+    const neonAccountResult = await db.execute(sql`
+      select
+        a.id,
+        a."userId",
+        a."accountId",
+        a."accessToken",
+        a."refreshToken",
+        a."accessTokenExpiresAt"
+      from neon_auth.account a
+      join neon_auth."user" u on u.id = a."userId"
+      where lower(u.email) = ${email}
+        and a."providerId" = 'google'
+      order by a."updatedAt" desc
+      limit 1
+    `)
+
+    const neonAccount = (neonAccountResult as unknown as {
+      rows?: Array<{
+        id: string
+        userId: string
+        accountId: string
+        accessToken: string | null
+        refreshToken: string | null
+        accessTokenExpiresAt: Date | string | null
+      }>
+    }).rows?.[0]
+
+    if (neonAccount?.accessToken) {
+      const accessTokenExpiresAt = neonAccount.accessTokenExpiresAt
+        ? new Date(neonAccount.accessTokenExpiresAt).getTime()
+        : 0
+
+      let freshTokens: { accessToken: string; accessTokenExpiresAt: number }
+      try {
+        freshTokens = await refreshAccessTokenIfNeeded({
+          accessToken: neonAccount.accessToken,
+          refreshToken: neonAccount.refreshToken ?? "",
+          accessTokenExpiresAt,
+        })
+
+        if (
+          freshTokens.accessToken !== neonAccount.accessToken ||
+          freshTokens.accessTokenExpiresAt !== accessTokenExpiresAt
+        ) {
+          await db.execute(sql`
+            update neon_auth.account
+            set
+              "accessToken" = ${freshTokens.accessToken},
+              "accessTokenExpiresAt" = ${new Date(freshTokens.accessTokenExpiresAt)}
+            where id = ${neonAccount.id}
+          `)
+        }
+      } catch (refreshError) {
+        const err = refreshError as { code?: string }
+        if (err.code === "GMAIL_AUTH_EXPIRED") {
+          return NextResponse.json({ error: "GMAIL_AUTH_EXPIRED" }, { status: 401 })
+        }
+        throw refreshError
+      }
+
+      const detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+      return NextResponse.json({ subscriptions: detected })
+    }
+
+    const canEncryptTokens = Boolean(process.env.TOKEN_ENCRYPTION_KEY)
+
+    // Legacy fallback path for users with old provider rows in public.accounts.
     const accountList = await db
       .select()
       .from(accounts)
@@ -80,16 +150,22 @@ export async function POST() {
         accessTokenExpiresAt: account.expires_at ? account.expires_at * 1000 : 0,
       })
 
-      // Persist encrypted tokens when refreshed or when migrating legacy plaintext.
+      // Persist tokens; encrypt when TOKEN_ENCRYPTION_KEY is configured.
       if (freshTokens.accessToken !== accessToken || usedLegacyPlaintext) {
-        const encryptedAccessToken = await encryptToken(freshTokens.accessToken)
-        const encryptedRefreshToken = refreshToken ? await encryptToken(refreshToken) : null
+        const storedAccessToken = canEncryptTokens
+          ? await encryptToken(freshTokens.accessToken)
+          : freshTokens.accessToken
+        const storedRefreshToken = refreshToken
+          ? canEncryptTokens
+            ? await encryptToken(refreshToken)
+            : refreshToken
+          : null
 
         await db
           .update(accounts)
           .set({
-            access_token: encryptedAccessToken,
-            refresh_token: encryptedRefreshToken,
+            access_token: storedAccessToken,
+            refresh_token: storedRefreshToken,
             expires_at: Math.floor(freshTokens.accessTokenExpiresAt / 1000),
           })
           .where(

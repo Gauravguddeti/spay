@@ -26,6 +26,18 @@ const updateSubscriptionSchema = z.object({
   notes: z.string().max(500).optional().nullable(),
 })
 
+function getTodayDateStringLocal() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function toDateOnly(value: string) {
+  return value.slice(0, 10)
+}
+
 async function getOrgForRequest() {
   const session = await auth()
 
@@ -57,7 +69,7 @@ export async function PATCH(
 
     const { id } = await context.params
     const [existing] = await db
-      .select({ id: subscriptions.id, orgId: subscriptions.orgId })
+      .select({ id: subscriptions.id, orgId: subscriptions.orgId, detectedVia: subscriptions.detectedVia })
       .from(subscriptions)
       .where(eq(subscriptions.id, id))
       .limit(1)
@@ -77,6 +89,17 @@ export async function PATCH(
         { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
         { status: 400 },
       )
+    }
+
+    const effectiveDetectedVia = parsed.data.detectedVia ?? existing.detectedVia ?? "manual"
+    if (effectiveDetectedVia === "manual" && parsed.data.nextRenewalDate) {
+      const renewalDate = toDateOnly(parsed.data.nextRenewalDate)
+      if (renewalDate < getTodayDateStringLocal()) {
+        return NextResponse.json(
+          { error: "Renewal date cannot be earlier than today" },
+          { status: 400 },
+        )
+      }
     }
 
     const updated = await updateSubscription(id, orgResult.sessionOrgId, {

@@ -350,7 +350,11 @@ export function LoginForm() {
     setIsLoading(true)
 
     const { error: socialError } = await safeAuthCall(() =>
-      authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" }),
+      authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/dashboard",
+        newUserCallbackURL: "/dashboard",
+      }),
     )
 
     if (socialError) {

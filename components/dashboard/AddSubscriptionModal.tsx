@@ -108,6 +108,14 @@ export function AddSubscriptionModal({
     return Object.entries(logos).find(([keyword]) => value.includes(keyword))?.[1] ?? null
   }, [values.name])
 
+  const todayDateString = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+    const day = String(now.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }, [])
+
   function setField<K extends keyof SubscriptionFormValues>(key: K, value: SubscriptionFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
   }
@@ -122,6 +130,11 @@ export function AddSubscriptionModal({
 
     if (!values.amountInr || Number(values.amountInr) <= 0) {
       setError("Amount must be greater than zero")
+      return
+    }
+
+    if (mode === "add" && values.nextRenewalDate && values.nextRenewalDate < todayDateString) {
+      setError("Renewal date cannot be earlier than today")
       return
     }
 
@@ -256,6 +269,7 @@ export function AddSubscriptionModal({
               <Label htmlFor="renewal-date">Next Renewal Date</Label>
               <Input
                 id="renewal-date"
+                min={mode === "add" ? todayDateString : undefined}
                 onChange={(event) => setField("nextRenewalDate", event.target.value)}
                 type="date"
                 value={values.nextRenewalDate}

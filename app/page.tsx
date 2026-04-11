@@ -4,8 +4,19 @@
 import { useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { authClient } from "@/lib/auth/client"
 
 export default function LandingPage() {
+  const router = useRouter()
+  const { data: sessionData } = authClient.useSession()
+
+  useEffect(() => {
+    if (sessionData?.user) {
+      router.replace("/dashboard")
+    }
+  }, [router, sessionData?.user])
+
   useEffect(() => {
     // 1. Cursor blob follower
     const blob = document.getElementById("cursor-blob")

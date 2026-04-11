@@ -18,6 +18,18 @@ const createSubscriptionSchema = z.object({
   notes: z.string().max(500).optional().nullable(),
 })
 
+function getTodayDateStringLocal() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function toDateOnly(value: string) {
+  return value.slice(0, 10)
+}
+
 export async function POST(request: Request) {
   try {
     const session = await auth()
@@ -42,6 +54,17 @@ export async function POST(request: Request) {
         { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
         { status: 400 },
       )
+    }
+
+    const effectiveDetectedVia = parsed.data.detectedVia ?? "manual"
+    if (effectiveDetectedVia === "manual" && parsed.data.nextRenewalDate) {
+      const renewalDate = toDateOnly(parsed.data.nextRenewalDate)
+      if (renewalDate < getTodayDateStringLocal()) {
+        return NextResponse.json(
+          { error: "Renewal date cannot be earlier than today" },
+          { status: 400 },
+        )
+      }
     }
 
     const created = await addSubscription({
