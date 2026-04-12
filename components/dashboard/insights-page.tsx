@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import {
   AlertTriangle,
@@ -11,15 +12,6 @@ import {
   TrendingUp,
   X,
 } from "lucide-react"
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -42,6 +34,16 @@ import {
   getRenewalRisks,
   getUnusedSubscriptions,
 } from "@/lib/insights/analyzer"
+
+const MonthlySpendTrendChart = dynamic(
+  () => import("@/components/dashboard/charts/MonthlySpendTrendChart"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[220px] w-full animate-pulse rounded-none bg-muted" />
+    ),
+  },
+)
 
 const DISMISS_KEY = "spay_dismissed_insights"
 
@@ -66,24 +68,6 @@ function formatInr(n: number) {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(n)
-}
-
-const CustomTooltip = ({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean
-  payload?: Array<{ value: number }>
-  label?: string
-}) => {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="rounded-none border border-border/70 bg-card px-3 py-2 shadow-md text-sm">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-semibold">{formatInr(payload[0].value)}</p>
-    </div>
-  )
 }
 
 type RawSub = {
@@ -347,31 +331,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer height={220} width="100%">
-              <LineChart data={trend} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  dataKey="amountInr"
-                  dot={{ fill: "var(--primary)", r: 4 }}
-                  stroke="var(--primary)"
-                  strokeWidth={2}
-                  type="monotone"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <MonthlySpendTrendChart data={trend} />
           </CardContent>
         </Card>
       )}

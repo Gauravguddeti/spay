@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -17,7 +16,7 @@ interface CancellationDialogProps {
   subscriptionName: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  onComplete: () => void
+  onComplete: (status: "cancelled" | "paused") => void
 }
 
 export function CancellationDialog({
@@ -27,7 +26,6 @@ export function CancellationDialog({
   onOpenChange,
   onComplete,
 }: CancellationDialogProps) {
-  const router = useRouter()
   const [step, setStep] = useState<"confirm" | "date">("confirm")
   const [cancelledAt, setCancelledAt] = useState(new Date().toISOString().split("T")[0])
   const [loading, setLoading] = useState(false)
@@ -51,8 +49,7 @@ export function CancellationDialog({
       if (!res.ok) throw new Error("Failed")
       toast.success("Marked as cancelled. We'll flag if charges reappear.")
       onOpenChange(false)
-      onComplete()
-      router.refresh()
+      onComplete("cancelled")
     } catch {
       toast.error("Failed to update subscription")
     } finally {
@@ -71,8 +68,7 @@ export function CancellationDialog({
       if (!res.ok) throw new Error("Failed")
       toast.success("Moved to Paused. Remember to actually cancel it!")
       onOpenChange(false)
-      onComplete()
-      router.refresh()
+      onComplete("paused")
     } catch {
       toast.error("Failed to update subscription")
     } finally {

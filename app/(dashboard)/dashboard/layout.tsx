@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 
 import { auth } from "@/auth"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { GlobalQuickAdd } from "@/components/dashboard/GlobalQuickAdd"
+import { GlobalQuickAddLazy } from "@/components/dashboard/global-quick-add-lazy"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 import { DEV_TEST_USER_ID } from "@/lib/utils/constants"
 
@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       userEmail={session.user.email}
       userName={session.user.name ?? "Founder"}
     >
-      <GlobalQuickAdd />
+      <GlobalQuickAddLazy />
       {children}
     </DashboardShell>
   )

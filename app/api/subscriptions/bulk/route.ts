@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { auth } from "@/auth"
-import { addSubscription } from "@/lib/db/queries/subscriptions"
+import { addSubscriptionsBulk } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 
 const BulkItemSchema = z.object({
@@ -44,22 +44,29 @@ export async function POST(req: NextRequest) {
 
   const { subscriptions } = parsed.data
 
-  const inserted = await Promise.all(
-    subscriptions.map((sub) =>
-      addSubscription({
-        orgId: organization.id,
-        name: sub.name,
-        category: sub.category ?? null,
-        amountInr: String(sub.amountInr),
-        billingCycle: "monthly",
-        nextRenewalDate: sub.date ? new Date(sub.date) : null,
-        status: "active",
-        detectedVia: sub.detectedVia === "pdf" ? "bank_statement" : sub.detectedVia === "gmail" ? "gmail" : "manual",
-        originalAmount: sub.originalAmount ? String(sub.originalAmount) : null,
-        originalCurrency: sub.originalCurrency ?? "INR",
-        usageStatus: "unknown",
-      }),
-    ),
+  const mapDetectedVia = (
+    source: "pdf" | "gmail" | "bank_statement" | "manual",
+  ): "manual" | "gmail" | "bank_statement" => {
+    if (source === "pdf") return "bank_statement"
+    if (source === "gmail") return "gmail"
+    if (source === "bank_statement") return "bank_statement"
+    return "manual"
+  }
+
+  const inserted = await addSubscriptionsBulk(
+    subscriptions.map((sub) => ({
+      orgId: organization.id,
+      name: sub.name,
+      category: sub.category ?? null,
+      amountInr: String(sub.amountInr),
+      billingCycle: "monthly",
+      nextRenewalDate: sub.date ? new Date(sub.date) : null,
+      status: "active",
+      detectedVia: mapDetectedVia(sub.detectedVia),
+      originalAmount: sub.originalAmount ? String(sub.originalAmount) : null,
+      originalCurrency: sub.originalCurrency ?? "INR",
+      usageStatus: "unknown",
+    })),
   )
 
   return NextResponse.json({ inserted: inserted.length })

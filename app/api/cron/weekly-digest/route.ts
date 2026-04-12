@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { differenceInDays, addDays } from "date-fns"
+import { inArray } from "drizzle-orm"
+
 import { db } from "@/lib/db"
-import { organizations, subscriptions, users } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
+import { getSubscriptionsByOrgIds } from "@/lib/db/queries/subscriptions"
+import { organizations, users } from "@/lib/db/schema"
 import { sendWeeklyDigest } from "@/lib/email/sendDigest"
 
 export const runtime = "nodejs"
@@ -21,21 +23,55 @@ export async function GET(req: NextRequest) {
   const weekAhead = addDays(today, 7)
 
   try {
-    const orgs = await db.select().from(organizations)
+    const orgs = await db
+      .select({
+        id: organizations.id,
+        ownerId: organizations.ownerId,
+      })
+      .from(organizations)
+
     const results: Array<{ orgId: string; status: string }> = []
+
+    const orgIds = orgs.map((org) => org.id)
+    const ownerIds = Array.from(new Set(orgs.flatMap((org) => (org.ownerId ? [org.ownerId] : []))))
+
+    const [owners, orgSubscriptions] = await Promise.all([
+      ownerIds.length > 0
+        ? db
+            .select({
+              id: users.id,
+              email: users.email,
+              name: users.name,
+            })
+            .from(users)
+            .where(inArray(users.id, ownerIds))
+        : Promise.resolve([]),
+      getSubscriptionsByOrgIds(orgIds),
+    ])
+
+    const ownersById = new Map(owners.map((owner) => [owner.id, owner]))
+    const subscriptionsByOrgId = new Map<string, (typeof orgSubscriptions)[number][]>()
+
+    for (const subscription of orgSubscriptions) {
+      if (subscription.status !== "active") continue
+
+      const existing = subscriptionsByOrgId.get(subscription.orgId)
+      if (existing) {
+        existing.push(subscription)
+      } else {
+        subscriptionsByOrgId.set(subscription.orgId, [subscription])
+      }
+    }
 
     for (const org of orgs) {
       try {
         // Find owner's email
         if (!org.ownerId) continue
-        const [user] = await db.select().from(users).where(eq(users.id, org.ownerId)).limit(1)
+        const user = ownersById.get(org.ownerId)
         if (!user?.email) continue
 
-        // Fetch all active subscriptions for org
-        const subs = await db
-          .select()
-          .from(subscriptions)
-          .where(and(eq(subscriptions.orgId, org.id), eq(subscriptions.status, "active")))
+        // Fetch active subscriptions for org from batched query results
+        const subs = subscriptionsByOrgId.get(org.id) ?? []
 
         // Total monthly spend
         const monthlySpend = subs.reduce((acc, s) => {

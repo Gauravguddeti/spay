@@ -1,8 +1,22 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import { revalidateTag, unstable_cache } from "next/cache"
 
 import { db } from "@/lib/db"
 import { organizations, renewalAlerts, subscriptions, type AlertPreferences } from "@/lib/db/schema"
+
+function resolveAlertOffsets(alertPreferences: AlertPreferences | null | undefined): number[] {
+  const alertOffsets: number[] = []
+
+  if (!alertPreferences) {
+    alertOffsets.push(30, 7, 1)
+  } else {
+    if (alertPreferences.days30) alertOffsets.push(30)
+    if (alertPreferences.days7) alertOffsets.push(7)
+    if (alertPreferences.days1) alertOffsets.push(1)
+  }
+
+  return alertOffsets
+}
 
 // ---------------------------------------------------------------------------
 // Renewal alert auto-insert
@@ -30,15 +44,7 @@ async function autoInsertRenewalAlerts(
     .limit(1)
 
   const alertPreferences = organization?.alertPreferences as AlertPreferences | null | undefined
-  const alertOffsets: number[] = []
-
-  if (!alertPreferences) {
-    alertOffsets.push(30, 7, 1)
-  } else {
-    if (alertPreferences.days30) alertOffsets.push(30)
-    if (alertPreferences.days7) alertOffsets.push(7)
-    if (alertPreferences.days1) alertOffsets.push(1)
-  }
+  const alertOffsets = resolveAlertOffsets(alertPreferences)
 
   const alertRows = alertOffsets
     .map((daysBeforeRenewal) => {
@@ -108,6 +114,16 @@ export async function getSubscriptionsByOrg(orgId: string) {
     .orderBy(desc(subscriptions.createdAt))
 }
 
+export async function getSubscriptionsByOrgIds(orgIds: string[]) {
+  if (orgIds.length === 0) return []
+
+  return db
+    .select()
+    .from(subscriptions)
+    .where(inArray(subscriptions.orgId, orgIds))
+    .orderBy(desc(subscriptions.createdAt))
+}
+
 export async function getSubscriptionByIdForOrg(id: string, orgId: string) {
   const [subscription] = await db
     .select()
@@ -161,6 +177,78 @@ export async function addSubscription(data: AddSubscriptionInput) {
   }
 
   revalidateTag(`org-stats-${data.orgId}`, "default")
+  return created
+}
+
+export async function addSubscriptionsBulk(data: AddSubscriptionInput[]) {
+  if (data.length === 0) return []
+
+  const created = await db
+    .insert(subscriptions)
+    .values(
+      data.map((item) => ({
+        orgId: item.orgId,
+        name: item.name,
+        category: item.category ?? null,
+        amountInr: item.amountInr,
+        billingCycle: item.billingCycle,
+        nextRenewalDate: item.nextRenewalDate ?? null,
+        status: item.status ?? "active",
+        detectedVia: item.detectedVia ?? "manual",
+        lastUsedAt: item.lastUsedAt ?? null,
+        usageStatus: item.usageStatus ?? "unknown",
+        originalAmount: item.originalAmount ?? null,
+        originalCurrency: item.originalCurrency ?? "INR",
+      })),
+    )
+    .returning()
+
+  const subscriptionsWithRenewal = created.filter((item) => item.nextRenewalDate)
+
+  if (subscriptionsWithRenewal.length > 0) {
+    const renewalOrgIds = Array.from(new Set(subscriptionsWithRenewal.map((item) => item.orgId)))
+    const organizationPreferences = await db
+      .select({
+        id: organizations.id,
+        alertPreferences: organizations.alertPreferences,
+      })
+      .from(organizations)
+      .where(inArray(organizations.id, renewalOrgIds))
+
+    const preferencesByOrgId = new Map(
+      organizationPreferences.map((org) => [
+        org.id,
+        org.alertPreferences as AlertPreferences | null | undefined,
+      ]),
+    )
+
+    const now = new Date()
+    const alertRows: { subscriptionId: string; alertDate: Date }[] = []
+
+    for (const item of subscriptionsWithRenewal) {
+      const alertOffsets = resolveAlertOffsets(preferencesByOrgId.get(item.orgId))
+      for (const daysBeforeRenewal of alertOffsets) {
+        const alertDate = new Date(item.nextRenewalDate!)
+        alertDate.setDate(alertDate.getDate() - daysBeforeRenewal)
+
+        if (alertDate > now) {
+          alertRows.push({
+            subscriptionId: item.id,
+            alertDate,
+          })
+        }
+      }
+    }
+
+    if (alertRows.length > 0) {
+      await db.insert(renewalAlerts).values(alertRows)
+    }
+  }
+
+  for (const orgId of new Set(created.map((item) => item.orgId))) {
+    revalidateTag(`org-stats-${orgId}`, "default")
+  }
+
   return created
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import NProgress from "nprogress"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 // Inject minimal NProgress styles
 const progressStyle = `
@@ -32,11 +32,47 @@ NProgress.configure({ showSpinner: false })
 
 export function NavigationProgress() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    NProgress.start()
-    const timer = setTimeout(() => NProgress.done(), 300)
-    return () => clearTimeout(timer)
+    // Mark completion when the actual route state updates.
+    NProgress.done()
+  }, [pathname, searchParams])
+
+  useEffect(() => {
+    function handleDocumentClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+      const target = event.target as HTMLElement | null
+      const anchor = target?.closest("a")
+      if (!anchor) return
+      if (anchor.target === "_blank" || anchor.hasAttribute("download")) return
+
+      const href = anchor.getAttribute("href")
+      if (!href || href.startsWith("#")) return
+
+      const nextUrl = new URL(anchor.href, window.location.href)
+      if (nextUrl.origin !== window.location.origin) return
+
+      const currentPath = `${window.location.pathname}${window.location.search}`
+      const nextPath = `${nextUrl.pathname}${nextUrl.search}`
+      if (nextPath === currentPath) return
+
+      NProgress.start()
+    }
+
+    function handlePopState() {
+      NProgress.start()
+    }
+
+    document.addEventListener("click", handleDocumentClick, true)
+    window.addEventListener("popstate", handlePopState)
+
+    return () => {
+      document.removeEventListener("click", handleDocumentClick, true)
+      window.removeEventListener("popstate", handlePopState)
+    }
   }, [pathname])
 
   return <style>{progressStyle}</style>

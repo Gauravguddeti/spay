@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { differenceInCalendarDays, format } from "date-fns"
 import { IndianRupee, X } from "lucide-react"
 import { toast } from "sonner"
@@ -48,17 +48,22 @@ function formatInr(amount: string) {
   }).format(Number(amount))
 }
 
-export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
-  const parsedDates = renewalDates.map((d) => new Date(d))
+export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, orgId: _orgId }: Props) {
+  const [calendarRenewals, setCalendarRenewals] = useState<RenewalItem[]>(renewals)
   const today = new Date()
+
+  useEffect(() => {
+    setCalendarRenewals(renewals)
+  }, [renewals])
 
   // Build map: dateKey → renewals
   const renewalMap = new Map<string, RenewalItem[]>()
-  for (const r of renewals) {
+  for (const r of calendarRenewals) {
     if (!r.nextRenewalDate) continue
     const key = format(new Date(r.nextRenewalDate), "yyyy-MM-dd")
     renewalMap.set(key, [...(renewalMap.get(key) ?? []), r])
   }
+  const parsedDates = Array.from(renewalMap.keys()).map((dateKey) => new Date(dateKey))
 
   const [cancellingId, setCancellingId] = useState<string | null>(null)
 
@@ -71,6 +76,7 @@ export function CalendarRenewalView({ renewalDates, renewals, orgId }: Props) {
         body: JSON.stringify({ status: "cancelled" }),
       })
       if (res.ok) {
+        setCalendarRenewals((prev) => prev.filter((item) => item.id !== subscriptionId))
         toast.success("Subscription cancelled")
       } else {
         toast.error("Failed to cancel subscription")

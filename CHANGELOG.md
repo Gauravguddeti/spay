@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2026-04-12
+- Performance stabilization pass (A + B):
+- Pass A hardening: reduced initial dashboard jank with safer loading behavior, tightened middleware/CSP behavior, and addressed key image/navigation regressions.
+- Pass B architecture: split dashboard shell into server-rendered layout plus focused client islands to reduce hydration cost.
+- Added lazy-loading boundaries for quick-add modal and insights chart payloads to keep non-critical JS out of initial route bundles.
+- Implemented optimistic subscription CRUD flows (add/edit/delete/status moves) with rollback-safe updates and cross-view sync events.
+- Removed N+1 access patterns in weekly digest and bulk subscription ingestion by batching org/subscription and preference lookups.
+- Reduced root font payload to the required families/weights with swap display strategy for better rendering performance.
+- Updated renewal calendar and navigation progress behavior to use immediate local state transitions and route-state completion events.
+
 - Security and code quality fixes:
 - Hardened `/api/alerts/send` authentication to fail closed when `CRON_SECRET` is missing and to return `401` for invalid bearer tokens.
 - Added WhatsApp alert number fields to onboarding and dashboard settings, including optional warning states when missing.

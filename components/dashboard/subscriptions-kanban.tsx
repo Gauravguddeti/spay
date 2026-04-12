@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -41,6 +41,13 @@ type Subscription = {
   notes?: string | null
 }
 
+type SubscriptionPayload = Partial<Subscription> & {
+  id: string
+  name: string
+}
+
+const SUBSCRIPTION_ADDED_EVENT = "spay:subscription-added"
+
 function formatInr(amount: number | string) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -49,8 +56,23 @@ function formatInr(amount: number | string) {
   }).format(Number(amount))
 }
 
+function normalizeSubscription(input: SubscriptionPayload): Subscription {
+  return {
+    id: input.id,
+    name: input.name,
+    amountInr: String(input.amountInr ?? "0"),
+    category: input.category ?? null,
+    status: input.status ?? "active",
+    billingCycle: input.billingCycle ?? "monthly",
+    nextRenewalDate: input.nextRenewalDate ?? null,
+    lastUsedAt: input.lastUsedAt ?? null,
+    notes: input.notes ?? null,
+  }
+}
+
 export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscription[] }) {
   const router = useRouter()
+  const [subscriptionItems, setSubscriptionItems] = useState<Subscription[]>(subscriptions)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit">("add")
@@ -61,6 +83,34 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
   // Cancellation dialog state
   const [cancellationSub, setCancellationSub] = useState<Subscription | null>(null)
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false)
+
+  useEffect(() => {
+    setSubscriptionItems(subscriptions)
+  }, [subscriptions])
+
+  useEffect(() => {
+    function onSubscriptionAdded(event: Event) {
+      const detail = (event as CustomEvent<SubscriptionPayload>).detail
+      if (!detail?.id) return
+
+      const incoming = normalizeSubscription(detail)
+      setSubscriptionItems((prev) => {
+        const existingIndex = prev.findIndex((item) => item.id === incoming.id)
+        if (existingIndex === -1) {
+          return [incoming, ...prev]
+        }
+
+        const next = [...prev]
+        next[existingIndex] = { ...next[existingIndex], ...incoming }
+        return next
+      })
+    }
+
+    window.addEventListener(SUBSCRIPTION_ADDED_EVENT, onSubscriptionAdded as EventListener)
+    return () => {
+      window.removeEventListener(SUBSCRIPTION_ADDED_EVENT, onSubscriptionAdded as EventListener)
+    }
+  }, [])
 
   const modalInitialValues = useMemo<SubscriptionFormValues | undefined>(() => {
     if (!editing) return undefined
@@ -98,31 +148,48 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
       }),
     })
 
+    const result = (await response.json()) as {
+      error?: string
+      subscription?: SubscriptionPayload
+    }
+
     if (!response.ok) {
-      const result = (await response.json()) as { error?: string }
       toast.error(result.error ?? "Request failed")
       throw new Error(result.error ?? "Request failed")
+    }
+
+    if (result.subscription) {
+      const incoming = normalizeSubscription(result.subscription)
+      setSubscriptionItems((prev) => {
+        if (modalMode === "add") {
+          return [incoming, ...prev]
+        }
+        return prev.map((item) => (item.id === incoming.id ? { ...item, ...incoming } : item))
+      })
     }
 
     toast.success(modalMode === "add" ? "Subscription added!" : "Subscription updated!")
     setEditing(null)
     setModalOpen(false)
-    router.refresh()
   }
 
   async function handleDelete() {
     if (!deleting) return
+    const previousSubscriptions = subscriptionItems
+
     setIsDeleting(true)
+    setSubscriptionItems((prev) => prev.filter((subscription) => subscription.id !== deleting.id))
+
     try {
       const response = await fetch(`/api/subscriptions/${deleting.id}`, { method: "DELETE" })
       if (!response.ok) {
         const result = (await response.json()) as { error?: string }
+        setSubscriptionItems(previousSubscriptions)
         toast.error(result.error ?? "Delete failed")
         return
       }
       toast.success("Subscription deleted")
       setDeleting(null)
-      router.refresh()
     } finally {
       setIsDeleting(false)
     }
@@ -140,27 +207,27 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
       {
         id: "active",
         title: "Active Spending",
-        tasks: subscriptions.filter((s) => s.status === "active").map(mapSub),
+        tasks: subscriptionItems.filter((s) => s.status === "active").map(mapSub),
       },
       {
         id: "paused",
         title: "Paused / On-Hold",
-        tasks: subscriptions.filter((s) => s.status === "paused").map(mapSub),
+        tasks: subscriptionItems.filter((s) => s.status === "paused").map(mapSub),
       },
       {
         id: "cancelled",
         title: "Cancelled",
-        tasks: subscriptions.filter((s) => s.status === "cancelled").map(mapSub),
+        tasks: subscriptionItems.filter((s) => s.status === "cancelled").map(mapSub),
       },
     ]
-  }, [subscriptions])
+  }, [subscriptionItems])
 
   const handleTaskMove = (taskId: string, fromCol: string, toCol: string) => {
     if (fromCol === toCol) return
 
     // If moving INTO cancelled, show the cancellation dialog instead of direct PATCH
     if (toCol === "cancelled") {
-      const sub = subscriptions.find((s) => s.id === taskId)
+      const sub = subscriptionItems.find((s) => s.id === taskId)
       if (sub) {
         setCancellationSub(sub)
         setCancellationDialogOpen(true)
@@ -168,14 +235,33 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
       }
     }
 
+    const previousStatus = subscriptionItems.find((subscription) => subscription.id === taskId)?.status
+    setSubscriptionItems((prev) =>
+      prev.map((subscription) =>
+        subscription.id === taskId ? { ...subscription, status: toCol } : subscription,
+      ),
+    )
+
     const updatePromise = fetch(`/api/subscriptions/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: toCol }),
-    }).then(async (res) => {
-      if (!res.ok) throw new Error("Failed to update status")
-      router.refresh()
     })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to update status")
+      })
+      .catch((error: unknown) => {
+        if (previousStatus) {
+          setSubscriptionItems((prev) =>
+            prev.map((subscription) =>
+              subscription.id === taskId
+                ? { ...subscription, status: previousStatus }
+                : subscription,
+            ),
+          )
+        }
+        throw error
+      })
 
     toast.promise(updatePromise, {
       loading: "Updating status...",
@@ -185,7 +271,7 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
   }
 
   const handleTaskEdit = (taskId: string) => {
-    const sub = subscriptions.find((s) => s.id === taskId)
+    const sub = subscriptionItems.find((s) => s.id === taskId)
     if (sub) {
       setEditing(sub)
       setModalMode("edit")
@@ -194,7 +280,7 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
   }
 
   const handleTaskDelete = (taskId: string) => {
-    const sub = subscriptions.find((s) => s.id === taskId)
+    const sub = subscriptionItems.find((s) => s.id === taskId)
     if (sub) setDeleting(sub)
   }
 
@@ -313,7 +399,15 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
             setCancellationDialogOpen(open)
             if (!open) setCancellationSub(null)
           }}
-          onComplete={() => router.refresh()}
+          onComplete={(nextStatus) => {
+            setSubscriptionItems((prev) =>
+              prev.map((subscription) =>
+                subscription.id === cancellationSub.id
+                  ? { ...subscription, status: nextStatus }
+                  : subscription,
+              ),
+            )
+          }}
         />
       )}
     </div>
