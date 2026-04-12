@@ -283,6 +283,14 @@ From `package.json`:
 - `npm run db:generate`
 - `npm run db:migrate`
 
+## License
+
+This repository is proprietary and marked as UNLICENSED.
+
+You may not use, copy, modify, merge, publish, distribute, sublicense, sell, or create derivative works from this software without prior written permission from the copyright owner.
+
+See the `LICENSE` file for full terms.
+
 ## Roadmap Signals Present in Code
 
 The current codebase already hints at future directions:
