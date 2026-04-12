@@ -1,25 +1,15 @@
-import {
-  BarChart3,
-  CalendarClock,
-  CreditCard,
-  FileSearch,
-  FileText,
-  LayoutDashboard,
-  Settings,
-} from "lucide-react"
-
-import { NavLink } from "@/components/dashboard/nav-link"
+import { NavLink, type NavIconName } from "@/components/dashboard/nav-link"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CreditCard },
-  { href: "/dashboard/calendar", label: "Renewal Calendar", icon: CalendarClock },
-  { href: "/dashboard/import", label: "Import PDF", icon: FileText },
-  { href: "/dashboard/connect", label: "Connect Gmail", icon: FileSearch },
-  { href: "/dashboard/insights", label: "Insights", icon: BarChart3 },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-]
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/dashboard/subscriptions", label: "Subscriptions", icon: "subscriptions" },
+  { href: "/dashboard/calendar", label: "Renewal Calendar", icon: "calendar" },
+  { href: "/dashboard/import", label: "Import PDF", icon: "import" },
+  { href: "/dashboard/connect", label: "Connect Gmail", icon: "connect" },
+  { href: "/dashboard/insights", label: "Insights", icon: "insights" },
+  { href: "/dashboard/settings", label: "Settings", icon: "settings" },
+] satisfies ReadonlyArray<{ href: string; label: string; icon: NavIconName }>
 
 export function SidebarNav({ mobile = false }: { mobile?: boolean }) {
   return (
