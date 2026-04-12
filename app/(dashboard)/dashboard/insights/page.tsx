@@ -4,13 +4,18 @@ import { auth } from "@/auth"
 import { InsightsPageClient } from "@/components/dashboard/insights-page"
 import { getSubscriptionsByOrg } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
-import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
+import { DEV_TEST_USER_ID } from "@/lib/utils/constants"
 
 export default async function InsightsPage() {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
-  const isTempLocalUser = session.user.id === TEMP_LOCAL_TEST_USER_ID
+  // DEV ONLY - this block is unreachable in production
+  // Remove before public launch if no longer needed
+  const isTempLocalUser =
+    process.env.NODE_ENV === "development" &&
+    DEV_TEST_USER_ID !== null &&
+    session.user.id === DEV_TEST_USER_ID
   let subscriptions: Awaited<ReturnType<typeof getSubscriptionsByOrg>> = []
 
   if (!isTempLocalUser) {

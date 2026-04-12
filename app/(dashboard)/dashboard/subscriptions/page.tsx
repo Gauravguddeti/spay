@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { SubscriptionsKanban } from "@/components/dashboard/subscriptions-kanban"
 import { getSubscriptionsByOrg } from "@/lib/db/queries/subscriptions"
-import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
+import { DEV_TEST_USER_ID } from "@/lib/utils/constants"
 
 export default async function SubscriptionsPage() {
   const session = await auth()
@@ -11,7 +11,12 @@ export default async function SubscriptionsPage() {
     redirect("/login")
   }
 
-  const isTempLocalUser = session.user.id === TEMP_LOCAL_TEST_USER_ID
+  // DEV ONLY - this block is unreachable in production
+  // Remove before public launch if no longer needed
+  const isTempLocalUser =
+    process.env.NODE_ENV === "development" &&
+    DEV_TEST_USER_ID !== null &&
+    session.user.id === DEV_TEST_USER_ID
   const orgId = session.user.orgId
 
   if (!isTempLocalUser && !orgId) {

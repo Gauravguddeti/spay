@@ -18,11 +18,21 @@ import type { AlertPreferences } from "@/lib/db/schema"
  */
 export async function POST(request: Request) {
   try {
-    // Validate cron secret to prevent unauthorised calls
-    const authHeader = request.headers.get("authorization")
     const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const authHeader = request.headers.get('authorization')
+
+    if (!cronSecret) {
+      return NextResponse.json(
+        { error: 'CRON_SECRET is not configured' },
+        { status: 500 }
+      )
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
     const todayStr = new Date().toISOString().slice(0, 10)
@@ -57,17 +67,44 @@ export async function POST(request: Request) {
     let failed = 0
 
     for (const row of alertRows) {
-      if (!row.whatsappNumber) continue
-
-      // Check org alert preferences
-      const prefs = row.alertPreferences as AlertPreferences | null
-      if (prefs) {
-        if (!prefs.days30 && !prefs.days7 && !prefs.days1) continue
-      }
-
       const renewalDate = row.nextRenewalDate
         ? new Date(row.nextRenewalDate)
         : null
+      const alertDate = row.alertDate ? new Date(row.alertDate) : null
+      const daysBeforeRenewal =
+        renewalDate && alertDate
+          ? differenceInCalendarDays(renewalDate, alertDate)
+          : null
+
+      const prefs = row.alertPreferences as AlertPreferences | null
+      if (prefs && daysBeforeRenewal !== null) {
+        const isTimingEnabled =
+          daysBeforeRenewal === 30
+            ? prefs.days30
+            : daysBeforeRenewal === 7
+              ? prefs.days7
+              : daysBeforeRenewal === 1
+                ? prefs.days1
+                : true
+
+        if (!isTimingEnabled) {
+          await db
+            .update(renewalAlerts)
+            .set({
+              sentAt: new Date(),
+              metadata: { skipped_reason: "preference_disabled" },
+            })
+            .where(eq(renewalAlerts.id, row.alertId))
+          continue
+        }
+      }
+
+      if (!row.whatsappNumber) {
+        console.warn(`Alert skipped: org ${row.orgId} has no WhatsApp number`)
+        Sentry.captureMessage(`Alert skipped: org ${row.orgId} has no WhatsApp number`)
+        continue
+      }
+
       const daysUntil = renewalDate
         ? differenceInCalendarDays(renewalDate, new Date())
         : null

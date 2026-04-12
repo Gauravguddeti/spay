@@ -13,11 +13,14 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [workspaceName, setWorkspaceName] = useState(orgName)
+  const [whatsappNumber, setWhatsappNumber] = useState("")
   const [alerts, setAlerts] = useState({ days30: true, days7: true, days1: false })
   const [completing, setCompleting] = useState(false)
 
   async function completeOnboarding() {
     setCompleting(true)
+    const normalizedWhatsappNumber = whatsappNumber.replace(/\s+/g, "").trim()
+
     try {
       const response = await fetch("/api/onboarding/complete", {
         method: "POST",
@@ -26,6 +29,7 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
         },
         body: JSON.stringify({
           organizationName: workspaceName.trim(),
+          whatsappNumber: normalizedWhatsappNumber || null,
           alertPreferences: alerts,
         }),
       })
@@ -165,6 +169,26 @@ export function OnboardingWizard({ orgName }: { orgName: string }) {
                 </p>
               </div>
               <div className="space-y-4">
+                <div className="space-y-2 rounded-none border border-border/70 px-4 py-3">
+                  <label className="text-sm font-medium" htmlFor="onboarding-whatsapp-number">
+                    WhatsApp number for renewal alerts
+                  </label>
+                  <input
+                    id="onboarding-whatsapp-number"
+                    value={whatsappNumber}
+                    onChange={(event) => setWhatsappNumber(event.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full rounded-none border border-border bg-background px-3 py-2 text-sm outline-none ring-0 focus:border-primary transition-colors"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    We&apos;ll send you a WhatsApp message before subscriptions renew
+                  </p>
+                  {!whatsappNumber.trim() ? (
+                    <p className="text-xs text-amber-700">
+                      Without a WhatsApp number, renewal alerts won&apos;t be delivered
+                    </p>
+                  ) : null}
+                </div>
                 <div className="flex items-center justify-between rounded-none border border-border/70 px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Bell className="h-4 w-4 text-primary" />

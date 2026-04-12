@@ -31,11 +31,7 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
-          {
-            key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://images.pexels.com; connect-src 'self' https://api.anthropic.com https://accounts.google.com;",
-          },
+          // CSP is set via middleware using a per-request nonce.
         ],
       },
     ]

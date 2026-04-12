@@ -3,7 +3,25 @@ type RateLimitEntry = {
   resetAt: number
 }
 
+// Used as fallback when Upstash Redis is not configured.
+// When UPSTASH_REDIS_REST_URL is set, middleware.ts uses Redis instead.
+// Do not use both simultaneously for the same route.
 const ATTEMPT_STORE = new Map<string, RateLimitEntry>()
+
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000
+const DEFAULT_WINDOW_MS = 15 * 60 * 1000
+
+const cleanupTimer = setInterval(() => {
+  const now = Date.now()
+
+  for (const [key, value] of ATTEMPT_STORE.entries()) {
+    if (now >= value.resetAt) {
+      ATTEMPT_STORE.delete(key)
+    }
+  }
+}, CLEANUP_INTERVAL_MS)
+
+cleanupTimer.unref()
 
 export function getClientIpFromHeaders(headers: Headers): string {
   const forwarded = headers.get("x-forwarded-for")
@@ -18,7 +36,7 @@ export function getClientIpFromHeaders(headers: Headers): string {
 export function takeRateLimitAttempt(
   key: string,
   maxAttempts = 5,
-  windowMs = 15 * 60 * 1000,
+  windowMs = DEFAULT_WINDOW_MS,
 ): {
   allowed: boolean
   retryAfterSeconds: number

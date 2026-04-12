@@ -33,6 +33,7 @@ type AlertPreferences = { days30: boolean; days7: boolean; days1: boolean }
 type OrgData = {
   id?: string
   name: string
+  whatsappNumber?: string | null
   alertPreferences: AlertPreferences | null
 }
 
@@ -60,6 +61,7 @@ export function SettingsPageClient() {
   // ── Notifications state ────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
   const [prefs, setPrefs] = useState<AlertPreferences>(DEFAULT_PREFS)
+  const [whatsappNumber, setWhatsappNumber] = useState("")
   const [savingNotifs, setSavingNotifs] = useState(false)
 
   // ── Danger zone state ──────────────────────────────────────────────────────
@@ -77,6 +79,7 @@ export function SettingsPageClient() {
         if (organization) {
           setOrgName(organization.name ?? "")
           setOrgId(organization.id ?? "")
+          setWhatsappNumber(organization.whatsappNumber ?? "")
           setPrefs(organization.alertPreferences ?? DEFAULT_PREFS)
         }
       })
@@ -136,12 +139,17 @@ export function SettingsPageClient() {
 
   // ── Notification handler ───────────────────────────────────────────────────
   async function handleSaveNotifs() {
+    const normalizedWhatsappNumber = whatsappNumber.replace(/\s+/g, "").trim()
+
     setSavingNotifs(true)
     try {
       const res = await fetch("/api/organizations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ alertPreferences: prefs }),
+        body: JSON.stringify({
+          alertPreferences: prefs,
+          whatsappNumber: normalizedWhatsappNumber || null,
+        }),
       })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) { toast.error(data.error ?? "Failed to save"); return }
@@ -354,6 +362,29 @@ export function SettingsPageClient() {
                 </div>
               ) : (
                 <>
+                  <div className="space-y-2">
+                    <Label htmlFor="notifications-whatsapp-number">WhatsApp number for renewal alerts</Label>
+                    <Input
+                      className="max-w-sm"
+                      id="notifications-whatsapp-number"
+                      onChange={(event) => setWhatsappNumber(event.target.value)}
+                      placeholder="+91 98765 43210"
+                      value={whatsappNumber}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      We&apos;ll send you a WhatsApp message before subscriptions renew
+                    </p>
+                    {whatsappNumber.trim() ? (
+                      <p className="text-xs text-muted-foreground">
+                        Current saved number: {whatsappNumber}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-700">
+                        Without a WhatsApp number, renewal alerts won&apos;t be delivered
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-3">
                     <p className="text-sm font-medium">Alert me before renewal:</p>
                     {(

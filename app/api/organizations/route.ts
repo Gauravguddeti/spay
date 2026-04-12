@@ -10,7 +10,7 @@ import {
   deleteUserAccount,
   getOrganizationByOwnerId,
 } from "@/lib/db/queries/users"
-import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
+import { DEV_TEST_USER_ID } from "@/lib/utils/constants"
 
 const DEFAULT_ALERT_PREFERENCES = { days30: true, days7: true, days1: false }
 
@@ -45,7 +45,9 @@ export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  if (session.user.id === TEMP_LOCAL_TEST_USER_ID) {
+  // DEV ONLY - this block is unreachable in production
+  // Remove before public launch if no longer needed
+  if (process.env.NODE_ENV === "development" && DEV_TEST_USER_ID && session.user.id === DEV_TEST_USER_ID) {
     return NextResponse.json({ organization: buildLocalDemoOrganization() })
   }
   if (!session.user.orgId) {
@@ -63,7 +65,12 @@ export async function PATCH(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const isTempLocalUser = session.user.id === TEMP_LOCAL_TEST_USER_ID
+  // DEV ONLY - this block is unreachable in production
+  // Remove before public launch if no longer needed
+  const isTempLocalUser =
+    process.env.NODE_ENV === "development" &&
+    DEV_TEST_USER_ID !== null &&
+    session.user.id === DEV_TEST_USER_ID
   const payload: unknown = await req.json()
   const parsed = UpdateOrgSchema.safeParse(payload)
 
@@ -116,7 +123,9 @@ export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const action = searchParams.get("action")
 
-  if (session.user.id === TEMP_LOCAL_TEST_USER_ID) {
+  // DEV ONLY - this block is unreachable in production
+  // Remove before public launch if no longer needed
+  if (process.env.NODE_ENV === "development" && DEV_TEST_USER_ID && session.user.id === DEV_TEST_USER_ID) {
     return NextResponse.json({ success: true })
   }
   if (!session.user.orgId) {

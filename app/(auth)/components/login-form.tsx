@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { authClient } from "@/lib/auth/client"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -21,27 +21,29 @@ type AuthErrorLike = {
 
 export function LoginForm() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(() => {
+    if (typeof window === "undefined") {
+      return ""
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    return params.get("email") ?? ""
+  })
   const [password, setPassword] = useState("")
   const [verificationOtp, setVerificationOtp] = useState("")
   const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
   const [lastOtpSentAt, setLastOtpSentAt] = useState<number>(0)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null
+    }
 
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const prefillEmail = params.get("email")
-    const onboardingPending = params.get("onboarding")
-
-    if (prefillEmail) {
-      setEmail(prefillEmail)
-    }
-
-    if (onboardingPending === "pending") {
-      setError("Account created. Please sign in once to finish onboarding setup.")
-    }
-  }, [])
+    return params.get("onboarding") === "pending"
+      ? "Account created. Please sign in once to finish onboarding setup."
+      : null
+  })
+  const [isLoading, setIsLoading] = useState(false)
 
   async function tryApplyPendingOrganizationSetup(currentEmail: string) {
     const raw = localStorage.getItem(PENDING_ONBOARDING_KEY)

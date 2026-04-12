@@ -2,7 +2,7 @@ import { and, desc, eq, gte, lte, sql } from "drizzle-orm"
 import { revalidateTag, unstable_cache } from "next/cache"
 
 import { db } from "@/lib/db"
-import { renewalAlerts, subscriptions } from "@/lib/db/schema"
+import { organizations, renewalAlerts, subscriptions, type AlertPreferences } from "@/lib/db/schema"
 
 // ---------------------------------------------------------------------------
 // Renewal alert auto-insert
@@ -10,6 +10,7 @@ import { renewalAlerts, subscriptions } from "@/lib/db/schema"
 
 async function autoInsertRenewalAlerts(
   subscriptionId: string,
+  orgId: string,
   nextRenewalDate: Date,
 ) {
   // Delete old unsent alerts for this subscription before re-creating
@@ -22,7 +23,23 @@ async function autoInsertRenewalAlerts(
       ),
     )
 
-  const alertOffsets = [30, 7, 1]
+  const [organization] = await db
+    .select({ alertPreferences: organizations.alertPreferences })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1)
+
+  const alertPreferences = organization?.alertPreferences as AlertPreferences | null | undefined
+  const alertOffsets: number[] = []
+
+  if (!alertPreferences) {
+    alertOffsets.push(30, 7, 1)
+  } else {
+    if (alertPreferences.days30) alertOffsets.push(30)
+    if (alertPreferences.days7) alertOffsets.push(7)
+    if (alertPreferences.days1) alertOffsets.push(1)
+  }
+
   const alertRows = alertOffsets
     .map((daysBeforeRenewal) => {
       const alertDate = new Date(nextRenewalDate)
@@ -140,7 +157,7 @@ export async function addSubscription(data: AddSubscriptionInput) {
 
   // Auto-schedule renewal alerts
   if (created.nextRenewalDate) {
-    await autoInsertRenewalAlerts(created.id, new Date(created.nextRenewalDate))
+    await autoInsertRenewalAlerts(created.id, data.orgId, new Date(created.nextRenewalDate))
   }
 
   revalidateTag(`org-stats-${data.orgId}`, "default")
@@ -172,7 +189,7 @@ export async function updateSubscription(
 
   // Re-schedule alerts if renewal date changed
   if (updated?.nextRenewalDate && data.nextRenewalDate !== undefined) {
-    await autoInsertRenewalAlerts(updated.id, new Date(updated.nextRenewalDate))
+    await autoInsertRenewalAlerts(updated.id, orgId, new Date(updated.nextRenewalDate))
   }
 
   revalidateTag(`org-stats-${orgId}`, "default")

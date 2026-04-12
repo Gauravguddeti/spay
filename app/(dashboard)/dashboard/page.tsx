@@ -15,7 +15,7 @@ import {
   getSubscriptionsByOrg,
 } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
-import { TEMP_LOCAL_TEST_USER_ID } from "@/lib/utils/constants"
+import { DEV_TEST_USER_ID } from "@/lib/utils/constants"
 
 const severityStyles = {
   info: {
@@ -67,7 +67,12 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const isTempLocalUser = session.user.id === TEMP_LOCAL_TEST_USER_ID
+  // DEV ONLY - this block is unreachable in production
+  // Remove before public launch if no longer needed
+  const isTempLocalUser =
+    process.env.NODE_ENV === "development" &&
+    DEV_TEST_USER_ID !== null &&
+    session.user.id === DEV_TEST_USER_ID
 
   let upcomingRenewals: Awaited<ReturnType<typeof getUpcomingRenewals>> = []
   let allSubs: Awaited<ReturnType<typeof getSubscriptionsByOrg>> = []

@@ -142,6 +142,7 @@ export const renewalAlerts = pgTable("renewal_alerts", {
   alertDate: date("alert_date", { mode: "date" }).notNull(),
   isSent: boolean("is_sent").default(false).notNull(),
   sentAt: timestamp("sent_at", { mode: "date", withTimezone: true }),
+  metadata: jsonb("metadata").$type<{ skipped_reason?: string }>().default({}),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .defaultNow()
     .notNull(),
