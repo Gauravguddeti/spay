@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { ChevronDown, Plus, FileText, Mail, Download } from "lucide-react"
@@ -234,16 +235,16 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
                 Add Manually
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" asChild>
-                <a href="/dashboard/import/email">
+                <Link href="/dashboard/import/email">
                   <Mail className="mr-2 h-4 w-4" />
                   Import from Gmail
-                </a>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" asChild>
-                <a href="/dashboard/import">
+                <Link href="/dashboard/import">
                   <FileText className="mr-2 h-4 w-4" />
                   Upload Bank Statement
-                </a>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

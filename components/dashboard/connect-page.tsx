@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
+import Link from "next/link"
 import { AlertCircle, CheckCircle2, Circle, ExternalLink, Loader2, Mail, PlugZap } from "lucide-react"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth/client"
@@ -41,7 +42,6 @@ function confidenceClass(score: number): string {
 
 export function ConnectPageClient({ gmailEnabled = true, initialConnected = false }: { gmailEnabled?: boolean, initialConnected?: boolean }) {
   const [isGmailConnected, setIsGmailConnected] = useState(initialConnected)
-  const [hasAutoScanned, setHasAutoScanned] = useState(false)
 
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -99,13 +99,6 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
       setScanning(false)
     }
   }, [])
-
-  useEffect(() => {
-    if (isGmailConnected && detected === null && !scanning && !hasAutoScanned) {
-      setHasAutoScanned(true)
-      void handleScan()
-    }
-  }, [detected, handleScan, hasAutoScanned, isGmailConnected, scanning])
 
   function toggleVendor(key: string) {
     setSelected((prev) => {
@@ -243,7 +236,7 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
 
       {importDone && (
         <div className="rounded-none border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Subscriptions imported successfully. View them in the <a className="underline" href="/dashboard/subscriptions">Subscriptions</a> tab.
+          Subscriptions imported successfully. View them in the <Link className="underline" href="/dashboard/subscriptions">Subscriptions</Link> tab.
         </div>
       )}
 

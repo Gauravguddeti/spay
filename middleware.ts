@@ -118,5 +118,13 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
+  matcher: [
+    '/dashboard/:path*',
+    '/api/auth/:path*',
+    '/api/subscriptions/:path*',
+    '/api/alerts/:path*',
+    '/api/integrations/:path*',
+    '/api/organizations/:path*',
+    '/api/settings/:path*',
+  ],
 }

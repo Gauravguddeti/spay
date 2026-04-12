@@ -30,7 +30,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type AlertPreferences = { days30: boolean; days7: boolean; days1: boolean }
-type OrgData = {
+export type SettingsInitialData = {
   id?: string
   name: string
   whatsappNumber?: string | null
@@ -39,7 +39,7 @@ type OrgData = {
 
 const DEFAULT_PREFS: AlertPreferences = { days30: true, days7: true, days1: false }
 
-export function SettingsPageClient() {
+export function SettingsPageClient({ initialData }: { initialData: SettingsInitialData | null }) {
   const { data: sessionData } = authClient.useSession()
   const session = sessionData?.user
 
@@ -54,14 +54,14 @@ export function SettingsPageClient() {
   const [savingPassword, setSavingPassword] = useState(false)
 
   // ── Organization state ─────────────────────────────────────────────────────
-  const [orgName, setOrgName] = useState("")
-  const [orgId, setOrgId] = useState("")
+  const [orgName, setOrgName] = useState(initialData?.name ?? "")
+  const [orgId, setOrgId] = useState(initialData?.id ?? "")
   const [savingOrg, setSavingOrg] = useState(false)
 
   // ── Notifications state ────────────────────────────────────────────────────
-  const [loading, setLoading] = useState(true)
-  const [prefs, setPrefs] = useState<AlertPreferences>(DEFAULT_PREFS)
-  const [whatsappNumber, setWhatsappNumber] = useState("")
+  const loading = false
+  const [prefs, setPrefs] = useState<AlertPreferences>(initialData?.alertPreferences ?? DEFAULT_PREFS)
+  const [whatsappNumber, setWhatsappNumber] = useState(initialData?.whatsappNumber ?? "")
   const [savingNotifs, setSavingNotifs] = useState(false)
 
   // ── Danger zone state ──────────────────────────────────────────────────────
@@ -71,20 +71,6 @@ export function SettingsPageClient() {
   useEffect(() => {
     setDisplayName(session?.name ?? "")
   }, [session])
-
-  useEffect(() => {
-    void fetch("/api/organizations")
-      .then((r) => r.json() as Promise<{ organization?: OrgData }>)
-      .then(({ organization }) => {
-        if (organization) {
-          setOrgName(organization.name ?? "")
-          setOrgId(organization.id ?? "")
-          setWhatsappNumber(organization.whatsappNumber ?? "")
-          setPrefs(organization.alertPreferences ?? DEFAULT_PREFS)
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [])
 
   // ── Profile handlers ───────────────────────────────────────────────────────
   async function handleSaveName() {

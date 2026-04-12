@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   AlertTriangle,
@@ -196,7 +197,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
               Insights will surface once you have at least a few subscriptions tracked.
             </p>
             <Button asChild className="mt-4 rounded-none" variant="outline">
-              <a href="/dashboard/subscriptions">Add Subscriptions</a>
+              <Link href="/dashboard/subscriptions">Add Subscriptions</Link>
             </Button>
           </CardContent>
         </Card>
@@ -325,7 +326,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
                   ))}
                 </div>
                 <Button asChild className="mt-3 rounded-none" size="sm" variant="outline">
-                  <a href="/dashboard/subscriptions">Review Duplicates</a>
+                  <Link href="/dashboard/subscriptions">Review Duplicates</Link>
                 </Button>
               </div>
             ))}

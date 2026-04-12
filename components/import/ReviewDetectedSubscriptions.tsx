@@ -142,7 +142,6 @@ export function ReviewDetectedSubscriptions({
       toast.success(`${data.inserted ?? toImport.length} subscriptions imported!`)
       onImportDone?.()
       router.push("/dashboard/subscriptions")
-      router.refresh()
     } catch {
       toast.error("Network error — please try again")
     } finally {

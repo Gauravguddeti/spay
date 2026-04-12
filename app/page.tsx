@@ -174,7 +174,6 @@ export default function LandingPage() {
                 className="project-image"
                 width={1200}
                 height={800}
-                unoptimized
               />
               <div className="floating-label huge-type outline-text label-right">SPEND</div>
             </div>
@@ -199,7 +198,6 @@ export default function LandingPage() {
                 className="project-image"
                 width={1200}
                 height={800}
-                unoptimized
               />
               <div className="floating-label huge-type outline-text label-left">INBOX</div>
             </div>
@@ -224,7 +222,6 @@ export default function LandingPage() {
                 className="project-image"
                 width={1200}
                 height={800}
-                unoptimized
               />
               <div className="floating-label huge-type outline-text label-right">ALERT</div>
             </div>
@@ -243,7 +240,6 @@ export default function LandingPage() {
                 alt="Team discussing business charts in a strategy meeting"
                 width={1200}
                 height={900}
-                unoptimized
               />
             </div>
             <div className="comp-item-2">
@@ -253,7 +249,6 @@ export default function LandingPage() {
                 alt="Laptop with spend analytics used to review subscriptions"
                 width={1200}
                 height={900}
-                unoptimized
               />
             </div>
             <div className="comp-item-3">
@@ -276,7 +271,6 @@ export default function LandingPage() {
                 alt="Phone displaying heads-up notifications for billing reminders"
                 width={1200}
                 height={900}
-                unoptimized
               />
             </div>
           </div>
