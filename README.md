@@ -1,278 +1,218 @@
 # SPAY
 
-Spay is a SaaS subscription spend control app for startup teams. It combines manual tracking with Gmail-assisted detection, then sends renewal reminders over WhatsApp so teams can reduce surprise renewals and identify waste.
+SPAY is a SaaS spend control platform for startup teams. It helps teams track subscriptions, detect likely SaaS charges from Gmail and bank statements, monitor renewals, and surface savings opportunities from underused tools.
 
-## Product Overview
+## Current Product Snapshot
 
-Spay helps teams answer three questions quickly:
+Primary capabilities currently in code:
 
-- What are we paying for every month?
-- What is renewing soon?
-- Which tools are likely unused and can be cut?
+- Neon Auth based authentication (email/password, email OTP verification, Google social sign-in).
+- Organization-scoped subscription tracking with CRUD.
+- Dashboard metrics (monthly spend, active subscriptions, renewals, potential savings).
+- Gmail scan and review flow for subscription detection.
+- PDF bank statement parsing and bulk import flow.
+- CSV export for subscriptions.
+- Renewal alert records with notification preferences.
+- Weekly email digest cron endpoint.
+- WhatsApp delivery endpoint for renewal reminders.
 
-Core capabilities:
+## Route Surface
 
-- Secure authentication with email/password and optional Google OAuth.
-- Organization-scoped subscription management (create, edit, delete).
-- Dashboard metrics for monthly spend, active tools, upcoming renewals, and potential savings.
-- Gmail receipt/invoice scanning to detect likely subscriptions.
-- Renewal alert scheduling and automated WhatsApp delivery.
+Public routes:
 
-## Current Route Surface
-
-There is no public marketing homepage route in the current app tree. Active user-facing routes are focused on authentication and the dashboard experience.
-
-Auth routes:
-
+- `/` marketing landing page.
 - `/login`
 - `/signup`
+- `/forgot-password`
 
 Dashboard routes:
 
-- `/dashboard` - spend overview and next renewals
-- `/dashboard/subscriptions` - subscription CRUD UI
-- `/dashboard/connect` - Gmail connection and import flow
-- `/dashboard/calendar` - renewal calendar for next 30 days
-- `/dashboard/settings` - WhatsApp number and alert preferences
-- `/dashboard/insights` - placeholder page for a future phase
+- `/dashboard`
+- `/dashboard/subscriptions`
+- `/dashboard/connect`
+- `/dashboard/import`
+- `/dashboard/import/email` (redirects to `/dashboard/connect`)
+- `/dashboard/calendar`
+- `/dashboard/insights`
+- `/dashboard/settings`
 
-## Architecture Snapshot
+## Architecture
 
 Application layer:
 
-- Next.js App Router with server-first route handlers and server components.
+- Next.js App Router (server components + route handlers).
 - React 19 + TypeScript.
-- Tailwind-based UI with Radix primitives.
+- Tailwind + Radix based UI system.
 
-Authentication and identity:
+Authentication:
 
-- NextAuth (JWT session strategy).
-- Drizzle adapter for auth persistence.
-- Credentials provider for email/password sign-in.
-- Optional Google provider with Gmail readonly scope.
+- Neon Auth server integration via `@neondatabase/auth/next/server`.
+- Auth API passthrough at `app/api/auth/[...path]/route.ts`.
+- Middleware-protected dashboard routes (`/dashboard/*`).
+- Email OTP flows used for sign-up verification and password reset.
 
 Data layer:
 
-- Postgres via Neon-compatible connection.
-- Drizzle ORM and Drizzle Kit migrations.
+- Postgres (Neon-compatible) via Drizzle ORM.
+- Schema in `lib/db/schema.ts`, migrations in `drizzle/`.
 
-Operational integrations:
+Integrations:
 
-- Upstash Redis rate limiting in middleware.
-- Twilio WhatsApp messages for renewal alerts.
-- Vercel cron for daily alert dispatch.
-- Sentry for error capture and source map upload controls.
+- Gmail API for receipt/invoice scanning.
+- Twilio for WhatsApp alert delivery.
+- Resend for weekly digest email sending.
+- Upstash Redis for middleware rate limiting.
 
-## Main User Flows
+## Main Flows
 
-### 1. Account creation and org bootstrap
+1. Account and onboarding
 
-1. User signs up with name, email, password, and organization name.
-2. Backend creates a user and default organization.
-3. User is auto-signed-in with credentials and redirected to dashboard.
+- User signs up, verifies email OTP, signs in, and completes onboarding.
+- Onboarding sets workspace name and renewal reminder preferences.
 
-### 2. Manual subscription management
+2. Manual subscription management
 
-1. User adds subscriptions in `/dashboard/subscriptions`.
-2. Subscriptions are stored with billing cycle, amount, status, and renewal date.
-3. User can update or delete subscriptions through scoped API endpoints.
+- Add, update, and delete subscriptions in an org-scoped model.
 
-### 3. Gmail detection and import
+3. Gmail import
 
-1. User connects Google account on `/dashboard/connect`.
-2. System requests Gmail readonly access.
-3. Scan endpoint reads recent invoice/receipt-like messages.
-4. Vendor and amount signals are extracted and converted to INR.
-5. User chooses detected items to import into subscriptions.
+- Connect Google account, scan Gmail, review detected subscriptions, and import selected items.
 
-### 4. Renewal reminders
+4. PDF import
 
-1. User sets WhatsApp number and alert preferences in `/dashboard/settings`.
-2. App creates renewal alert rows for selected timing windows.
-3. Daily cron executes alert sender endpoint.
-4. Unsent alerts due today are delivered over Twilio WhatsApp.
+- Upload bank statement PDF, parse detected SaaS charges, bulk import selected items.
 
-## API Reference
+5. Notifications and reporting
 
-All endpoints return JSON.
+- Create renewal alert rows and send due reminders.
+- Send weekly digest via cron endpoint.
 
-### Authentication
+## API Surface
 
-- `GET|POST /api/auth/[...nextauth]`
-  - NextAuth handlers.
+Most endpoints return JSON. The CSV export endpoint returns `text/csv`.
+
+Authentication:
+
+- `GET|POST|PUT|PATCH|DELETE /api/auth/[...path]`
+  - Neon Auth handler passthrough.
 - `POST /api/auth/signup`
-  - Creates a credentials user and organization.
-  - Validates input with Zod.
-  - Rejects duplicate emails.
+  - Legacy compatibility route for user + org creation.
+- `POST /api/auth/legacy-verify`
+  - Legacy password verification route used in migration fallback.
 
-### Subscriptions
+User and organization:
+
+- `PATCH /api/users`
+  - Update profile name or password.
+- `GET /api/organizations`
+- `PATCH /api/organizations`
+- `DELETE /api/organizations?action=delete_subscriptions|delete_account`
+- `POST /api/onboarding/complete`
+
+Subscriptions:
 
 - `POST /api/subscriptions`
-  - Creates a new subscription for the authenticated user's organization.
+- `POST /api/subscriptions/bulk`
 - `PATCH /api/subscriptions/[id]`
-  - Updates a specific subscription in the same organization.
 - `DELETE /api/subscriptions/[id]`
-  - Deletes a specific subscription in the same organization.
+- `GET /api/export/csv`
 
-### Organization settings
-
-- `GET /api/organizations`
-  - Returns current organization settings.
-- `PATCH /api/organizations`
-  - Updates WhatsApp number and alert preferences.
-
-### Gmail integration
+Imports and integrations:
 
 - `POST /api/integrations/gmail/scan`
-  - Requires authenticated session with Google access token.
-  - Refreshes token when nearing expiry.
-  - Returns detected subscription candidates.
+- `POST /api/import/pdf`
 
-### Alerts
+Alerts and jobs:
 
 - `POST /api/alerts/create`
-  - Creates a renewal alert for a subscription and timing (30, 7, or 1 day).
 - `POST /api/alerts/send`
-  - Sends due alerts for today and marks successful sends.
-  - Supports `Authorization: Bearer <CRON_SECRET>` protection when configured.
+- `GET /api/cron/weekly-digest`
 
 ## Data Model
 
-Primary tables:
+Core tables:
 
-- `users` - identity records (credentials and profile).
-- `accounts` - OAuth account links and provider tokens.
-- `sessions` - session persistence for auth adapter.
-- `verification_tokens` - token store for auth flows.
-- `organizations` - account container, owner link, WhatsApp and alert preferences.
-- `subscriptions` - tracked tools, billing cycle, renewal date, status, usage signals.
-- `renewal_alerts` - queued reminder entries and delivery metadata.
+- `users`
+- `organizations`
+- `subscriptions`
+- `renewal_alerts`
 
-Notable domain fields:
+Compatibility and integration tables still present:
+
+- `accounts`
+- `sessions`
+- `verification_tokens`
+
+Notable enums/fields:
 
 - `subscriptions.billingCycle`: `monthly | annual | one-time`
 - `subscriptions.status`: `active | cancelled | paused`
 - `subscriptions.detectedVia`: `manual | gmail | bank_statement`
 - `subscriptions.usageStatus`: `active | unused | unknown`
-- `organizations.alertPreferences`: JSON object `{ days30, days7, days1 }`
-
-## Security and Access Controls
-
-Authentication and authorization:
-
-- Dashboard routes require authenticated users.
-- API endpoints derive organization scope from session user id.
-- Subscription updates/deletes are org-scoped to prevent cross-tenant access.
-
-Rate limiting:
-
-- Middleware applies Upstash sliding-window limits to auth-related endpoints.
-- Default policy: 10 requests per 60 seconds per IP.
-
-Secrets and token handling:
-
-- NextAuth secret required for stable secure sessions.
-- Google OAuth refresh token path used for Gmail integration continuity.
-- Cron endpoint can be protected with `CRON_SECRET`.
+- `organizations.alertPreferences`: `{ days30, days7, days1 }`
 
 ## Environment Variables
 
-The repository includes `.env.local.example` with core variables. Additional keys are required for optional integrations.
+Required for core runtime:
 
-Core runtime:
+- `DATABASE_URL`
+- `NEON_AUTH_BASE_URL`
+- `NEON_AUTH_COOKIE_SECRET` (must be at least 32 chars)
 
-- `DATABASE_URL` (required)
-- `AUTH_SECRET` (required)
-- `GOOGLE_CLIENT_ID` (optional but required for Gmail connect flow)
-- `GOOGLE_CLIENT_SECRET` (optional but required for Gmail connect flow)
-- `UPSTASH_REDIS_REST_URL` (optional, enables middleware rate limiting)
-- `UPSTASH_REDIS_REST_TOKEN` (optional, enables middleware rate limiting)
+Auth and Gmail integration:
 
-Alerting and scheduled jobs:
+- `GOOGLE_CLIENT_ID` or `AUTH_GOOGLE_ID`
+- `GOOGLE_CLIENT_SECRET` or `AUTH_GOOGLE_SECRET`
+- `TOKEN_ENCRYPTION_KEY` (recommended for encrypted token storage path)
 
-- `TWILIO_ACCOUNT_SID` (required for WhatsApp delivery)
-- `TWILIO_AUTH_TOKEN` (required for WhatsApp delivery)
-- `TWILIO_WHATSAPP_FROM` (required for WhatsApp delivery)
-- `CRON_SECRET` (optional but recommended for `/api/alerts/send` hardening)
-- `NEXT_PUBLIC_APP_URL` (optional, used in alert message links)
+Rate limiting:
 
-Sentry integration:
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
 
-- `SENTRY_ORG` (optional)
-- `SENTRY_PROJECT` (optional)
+Notifications and email:
 
-Development-only helper credentials supported by auth logic:
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_WHATSAPP_FROM`
+- `RESEND_API_KEY`
 
-- `DEV_TEST_EMAIL` (optional)
-- `DEV_TEST_PASSWORD` (optional)
-- `DEV_TEST_NAME` (optional)
-- `DEV_TEST_ORG_NAME` (optional)
+Cron/auth protection and links:
 
-## Database and Migration Operations
+- `CRON_SECRET`
+- `NEXT_PUBLIC_APP_URL` (used in alert links)
+- `NEXTAUTH_URL` (currently used by weekly digest endpoint for app URL)
 
-Drizzle configuration:
-
-- `drizzle.config.ts` reads `DATABASE_URL` from `.env.local`.
-- Schema source: `lib/db/schema.ts`.
-- SQL migration output: `drizzle/`.
-
-Available scripts:
-
-- `npm run db:generate` - generate migration files from schema changes.
-- `npm run db:migrate` - apply migrations.
+Note: `.env.local.example` currently lists only a subset of the values used in runtime code.
 
 ## Scheduled Jobs
 
-`vercel.json` defines one cron:
+`vercel.json` currently defines:
 
-- `30 3 * * *` -> `POST /api/alerts/send`
+- `0 3 * * 1` -> `/api/cron/weekly-digest`
 
-This corresponds to 3:30 AM UTC daily (9:00 AM IST).
+Additional job endpoint available but not scheduled by default in `vercel.json`:
 
-Alert sender behavior:
+- `/api/alerts/send`
 
-- Selects unsent alerts where `alert_date = today`.
-- Joins subscription and organization metadata.
-- Sends WhatsApp messages when org preferences permit.
-- Marks records as sent only after successful delivery.
-- Captures failed sends in Sentry and leaves alerts pending for retry.
+## Security and Ops Notes
 
-## Quality and Observability
+- Dashboard access is protected by Neon Auth middleware.
+- Middleware applies Upstash sliding-window rate limiting to `/api/auth/sign-in*` and `/api/auth/sign-up*`.
+- Legacy auth routes use an in-memory rate limiter.
+- Global HTTP security headers are configured in `next.config.mjs`.
+- Critical API error paths capture exceptions via Sentry.
 
-Quality gates:
+## Repository Layout
 
-- TypeScript build errors are not ignored in Next config.
-- ESLint uses flat config with Next core-web-vitals preset.
+- `app/` routes and API handlers.
+- `components/` UI and feature components.
+- `lib/` auth, db, integrations, security, insights, notifications.
+- `drizzle/` SQL migrations.
+- `landing-edits/` design playground, not active app runtime surface.
+- `_archive/` archived files.
 
-Lint scope exclusions:
-
-- `landing-edits/**`
-- `_archive/**`
-
-Observability:
-
-- Route-level exception capture is wired with Sentry in critical API handlers.
-- Source map upload behavior is controlled through `withSentryConfig` options.
-
-## Repository Notes
-
-Important folders:
-
-- `app/` - route handlers and server/client pages.
-- `components/` - reusable UI and dashboard feature components.
-- `lib/` - DB access, auth helpers, integrations, utilities.
-- `drizzle/` - migration SQL history.
-- `landing-edits/` - standalone design drafts and experiments, not active app surface.
-- `_archive/` - archived code, excluded from active linting.
-
-## Known Constraints
-
-- Gmail detection relies on heuristic parsing (vendor/domain map + regex extraction).
-- Currency conversion currently uses static INR conversion constants.
-- Auto-import from Gmail defaults billing cycle to monthly; manual correction may be needed.
-- Renewal alerts depend on valid Twilio WhatsApp setup and verified recipient path.
-
-## Script Reference
+## Scripts
 
 From `package.json`:
 
@@ -283,19 +223,16 @@ From `package.json`:
 - `npm run db:generate`
 - `npm run db:migrate`
 
+## Current Constraints and Notes
+
+- UI text in onboarding/settings currently frames reminders as notifications/email preferences, while `/api/alerts/send` still delivers via WhatsApp.
+- `POST /api/auth/signup` and `POST /api/auth/legacy-verify` are compatibility endpoints and not the primary Neon Auth path.
+- Gmail detection is heuristic and imports default to monthly billing unless edited.
+
 ## License
 
 This repository is proprietary and marked as UNLICENSED.
 
 You may not use, copy, modify, merge, publish, distribute, sublicense, sell, or create derivative works from this software without prior written permission from the copyright owner.
 
-See the `LICENSE` file for full terms.
-
-## Roadmap Signals Present in Code
-
-The current codebase already hints at future directions:
-
-- richer insights page and savings analytics,
-- improved Gmail parsing confidence and categorization,
-- live exchange-rate based currency normalization,
-- expanded usage intelligence beyond basic last-used heuristics.
+See `LICENSE` for full terms.
