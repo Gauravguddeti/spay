@@ -6,7 +6,14 @@ import { BarChart3, CalendarClock, CreditCard, FileSearch, FileText, LayoutDashb
 import { authClient } from "@/lib/auth/client"
 
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { APP_NAME, DASHBOARD_SIDEBAR_TITLE, ORG_LABEL } from "@/lib/utils/constants"
 
@@ -86,6 +93,10 @@ export function DashboardShell({ children, orgName, userName, userEmail }: Dashb
                   </Button>
                 </SheetTrigger>
                 <SheetContent className="w-70 rounded-none border-l-border/70 bg-card" side="left">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                    <SheetDescription>Navigate between dashboard sections.</SheetDescription>
+                  </SheetHeader>
                   <div className="pt-6 pb-6 border-b border-border/70 mb-6">
                     <p className="font-serif text-3xl font-extrabold tracking-tighter">SPAY</p>
                     <p className="mt-1 text-xs font-mono text-muted-foreground uppercase tracking-widest text-[#5a9078]">Control Center</p>

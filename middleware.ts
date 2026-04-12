@@ -30,7 +30,7 @@ const RATE_LIMITED_PATHS = ["/api/auth/sign-in", "/api/auth/sign-up"]
 function buildCspHeader(nonce: string) {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'`,
+    `script-src 'self' 'nonce-${nonce}' https://va.vercel-scripts.com`,
     // Keep style unsafe-inline for Tailwind/runtime styles.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://images.pexels.com",
