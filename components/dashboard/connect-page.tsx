@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, CheckCircle2, Circle, ExternalLink, Loader2, Mail, PlugZap } from "lucide-react"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth/client"
@@ -22,11 +23,30 @@ type DetectedSubscription = {
 }
 
 const GOOGLE_GMAIL_SCOPES = [
-  "openid",
-  "email",
-  "profile",
+  // MANUAL REQUIREMENT: Gmail API must be enabled in Google
+  // Cloud Console and gmail.readonly must be added to the
+  // OAuth consent screen authorized scopes.
   "https://www.googleapis.com/auth/gmail.readonly",
 ]
+const MAX_AUTO_RECONNECT_ATTEMPTS = 1
+
+function getReconnectGuidance(message?: string): string {
+  const normalized = String(message ?? "").toLowerCase()
+  if (normalized.includes("scope")) {
+    return "Gmail access is missing read-only permission. Click Connect Gmail and approve gmail.readonly access. If it is not listed, enable Gmail API and add gmail.readonly in your Google OAuth consent screen."
+  }
+
+  return "Gmail reconnect failed. Click Connect Gmail, choose the correct account, and approve Gmail read-only access before rescanning."
+}
+
+function parseReconnectAttempt(value: string | null): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0
+  }
+
+  return Math.floor(parsed)
+}
 
 function confidenceLabel(score: number): string {
   if (score >= 0.9) return "High"
@@ -41,6 +61,11 @@ function confidenceClass(score: number): string {
 }
 
 export function ConnectPageClient({ gmailEnabled = true, initialConnected = false }: { gmailEnabled?: boolean, initialConnected?: boolean }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const hasTriggeredAutoRescan = useRef(false)
+  const reconnectAttemptFromQuery = parseReconnectAttempt(searchParams.get("reconnectAttempt"))
+  const reconnectAttempts = useRef(reconnectAttemptFromQuery)
   const [isGmailConnected, setIsGmailConnected] = useState(initialConnected)
 
   const [scanning, setScanning] = useState(false)
@@ -50,11 +75,12 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
   const [importing, setImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
 
+  const shouldAutoRescan = searchParams.get("rescan") === "1"
+
   function startGoogleConnect(callbackURL: string) {
-    void authClient.signIn.social({
+    void authClient.linkSocial({
       provider: "google",
       callbackURL,
-      newUserCallbackURL: callbackURL,
       scopes: GOOGLE_GMAIL_SCOPES,
     })
   }
@@ -71,19 +97,41 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
       }
 
       if (!res.ok) {
-        if (data.error === "GMAIL_AUTH_EXPIRED" || data.error === "GMAIL_NOT_CONNECTED") {
+        if (data.error === "GMAIL_NOT_CONNECTED") {
           setIsGmailConnected(false)
-          setScanError("Gmail connection expired. Please reconnect your account.")
-          toast.info("Refreshing Gmail connection... you will return here automatically.")
-          startGoogleConnect("/dashboard/connect?rescan=1")
-        } else {
-          const message = data.message ?? data.error ?? "Scan failed"
-          setScanError(message)
-          toast.error(message)
+          reconnectAttempts.current = 0
+          const actionableMessage =
+            "Gmail is not connected. Click Connect Gmail and approve Gmail read-only access before rescanning."
+          setScanError(actionableMessage)
+          toast.error(actionableMessage)
+          return
         }
+
+        if (data.error === "GMAIL_AUTH_EXPIRED") {
+          setIsGmailConnected(false)
+          const nextAttempt = reconnectAttempts.current + 1
+          reconnectAttempts.current = nextAttempt
+          if (nextAttempt <= MAX_AUTO_RECONNECT_ATTEMPTS) {
+            setScanError("Gmail connection expired. Redirecting to reconnect...")
+            toast.info(
+              `Refreshing Gmail connection (${nextAttempt}/${MAX_AUTO_RECONNECT_ATTEMPTS})...`,
+            )
+            startGoogleConnect(`/dashboard/connect?rescan=1&reconnectAttempt=${nextAttempt}`)
+          } else {
+            const actionableMessage = getReconnectGuidance(data.message)
+            setScanError(actionableMessage)
+            toast.error(actionableMessage)
+          }
+          return
+        }
+
+        const message = data.message ?? data.error ?? "Scan failed"
+        setScanError(message)
+        toast.error(message)
         return
       }
 
+      reconnectAttempts.current = 0
       setScanError(null)
       setDetected(data.subscriptions ?? [])
       const preSelected = new Set(
@@ -99,6 +147,17 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
       setScanning(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (!shouldAutoRescan || !isGmailConnected || scanning || hasTriggeredAutoRescan.current) {
+      return
+    }
+
+    hasTriggeredAutoRescan.current = true
+    setScanError(null)
+    void handleScan()
+    router.replace("/dashboard/connect")
+  }, [handleScan, isGmailConnected, router, scanning, shouldAutoRescan])
 
   function toggleVendor(key: string) {
     setSelected((prev) => {
@@ -204,6 +263,7 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
             <Button
               className="rounded-none"
               onClick={() => {
+                reconnectAttempts.current = 0
                 setScanError(null)
                 startGoogleConnect("/dashboard/connect")
               }}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-13
+- Gmail connect hardening:
+- Updated Gmail OAuth connect flow to explicitly request `https://www.googleapis.com/auth/gmail.readonly` and documented required Google Cloud consent configuration.
+- Added `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` entries to `.env.local.example` while keeping legacy `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` aliases.
+- Made dashboard Gmail connected-state checks scope-aware so accounts without `gmail.readonly` are treated as not connected.
+- Added post-OAuth `rescan=1` handling to auto-trigger a single inbox scan after reconnect.
+- Prevented infinite reconnect loops by persisting reconnect attempts across OAuth redirects and surfacing actionable guidance after retry cap is reached.
+
 ## 2026-04-12
 - Performance stabilization pass (A + B):
 - Pass A hardening: reduced initial dashboard jank with safer loading behavior, tightened middleware/CSP behavior, and addressed key image/navigation regressions.
