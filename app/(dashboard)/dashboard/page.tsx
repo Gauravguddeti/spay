@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { differenceInCalendarDays, format } from "date-fns"
-import { LayoutDashboard, Download } from "lucide-react"
+import { LayoutDashboard, Download, ChevronRight } from "lucide-react"
 import Link from "next/link"
 
 import { auth } from "@/auth"
@@ -55,9 +55,15 @@ function formatInr(value: number): string {
 }
 
 function urgencyClass(daysLeft: number): string {
-  if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
-  if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
-  return "bg-emerald-100 text-emerald-800 border-emerald-200"
+  if (daysLeft <= 3) return "border-[var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger)]"
+  if (daysLeft <= 7) return "border-[var(--status-warning-border)] bg-[var(--status-warning-bg)] text-[var(--status-warning)]"
+  return "border-[var(--status-success-border)] bg-[var(--status-success-bg)] text-[var(--status-success)]"
+}
+
+function renewalRowClass(daysLeft: number): string {
+  if (daysLeft <= 3) return "border-[var(--status-danger-border)] bg-[var(--status-danger-bg)]"
+  if (daysLeft <= 7) return "border-[var(--status-warning-border)] bg-[var(--status-warning-bg)]"
+  return "border-[var(--border-subtle)] bg-[var(--surface-overlay)]"
 }
 
 export default async function DashboardPage() {
@@ -122,16 +128,19 @@ export default async function DashboardPage() {
     <>
       {showOnboarding && <OnboardingWizard orgName={orgName} />}
 
-      <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-        <div className="flex items-start justify-between rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+      <section className="relative space-y-4 overflow-hidden motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+        <div className="brand-glow -right-52 -top-56 opacity-80" aria-hidden="true" />
+
+        <div className="relative z-10 flex items-start justify-between rounded-none border bg-[var(--surface-raised)] px-6 py-5 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 [border-color:var(--border-subtle)]">
           <div>
-            <p className="text-xs font-mono text-muted-foreground">SPEND OVERVIEW</p>
-            <h1 className="mt-2 font-serif text-3xl">Dashboard</h1>
+            <div className="accent-line" />
+            <h1 className="font-serif text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Your spend overview</p>
           </div>
           {!isEmpty && (
             <a
               href="/api/export/csv"
-              className="flex items-center gap-2 rounded-none border border-border/70 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              className="flex items-center gap-2 rounded-none border px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-overlay)] [background:var(--surface-base)] [border-color:var(--border-subtle)]"
             >
               <Download className="h-4 w-4" />
               Export CSV
@@ -140,51 +149,51 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+          <Card className="rounded-none border-l-2 border border-[var(--border-subtle)] [border-left-color:var(--accent-primary)] [background:var(--surface-raised)] transition-all duration-300 ease-out hover:[border-color:var(--border-accent)] hover:shadow-[var(--shadow-accent)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Monthly Spend
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="font-serif text-2xl">{formatInr(stats.totalMonthlySpendInr)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Estimated normalized monthly burn</p>
+              <p className="font-display text-3xl font-bold text-[var(--text-primary)]">{formatInr(stats.totalMonthlySpendInr)}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Estimated normalized monthly burn</p>
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+          <Card className="rounded-none border-l-2 border border-[var(--border-subtle)] [border-left-color:var(--accent-primary)] [background:var(--surface-raised)] transition-all duration-300 ease-out hover:[border-color:var(--border-accent)] hover:shadow-[var(--shadow-accent)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Active Subscriptions
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="font-serif text-2xl">{stats.activeSubscriptionsCount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Currently billing tools</p>
+              <p className="font-display text-3xl font-bold text-[var(--text-primary)]">{stats.activeSubscriptionsCount}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Currently billing tools</p>
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+          <Card className="rounded-none border-l-2 border border-[var(--border-subtle)] [border-left-color:var(--status-warning)] [background:var(--surface-raised)] transition-all duration-300 ease-out hover:[border-color:var(--border-accent)] hover:shadow-[var(--shadow-accent)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Renewing Soon
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="font-serif text-2xl">{stats.renewingThisMonthCount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Due in the next 30 days</p>
+              <p className="font-display text-3xl font-bold text-[var(--text-primary)]">{stats.renewingThisMonthCount}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Due in the next 30 days</p>
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+          <Card className="rounded-none border-l-2 border border-[var(--border-subtle)] [border-left-color:var(--status-success)] [background:var(--surface-raised)] transition-all duration-300 ease-out hover:[border-color:var(--border-accent)] hover:shadow-[var(--shadow-accent)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Potential Savings
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="font-serif text-2xl">{formatInr(stats.potentialSavingsInr)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="font-display text-3xl font-bold text-[var(--text-primary)]">{formatInr(stats.potentialSavingsInr)}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {stats.potentialSavingsCount} underused subscription{stats.potentialSavingsCount === 1 ? "" : "s"}
               </p>
             </CardContent>
@@ -245,12 +254,12 @@ export default async function DashboardPage() {
 
         {/* Upcoming Renewals */}
         {next3Renewals.length > 0 && (
-          <Card className="rounded-none border-border/70 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+          <Card className="rounded-none border [border-color:var(--border-subtle)] [background:var(--surface-raised)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-3">
               <CardDescription className="text-xs font-mono uppercase tracking-wide">
                 UPCOMING RENEWALS
               </CardDescription>
-              <p className="font-serif text-xl">Next 3 Renewals</p>
+              <p className="font-display text-xl text-[var(--text-primary)]">Next 3 Renewals</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {next3Renewals.map((renewal) => {
@@ -261,19 +270,22 @@ export default async function DashboardPage() {
 
                 return (
                   <div
-                    className="flex items-center justify-between rounded-none border border-border/70 px-4 py-3"
+                    className={`flex items-center justify-between rounded-none border px-4 py-3 ${renewalRowClass(daysLeft)}`}
                     key={renewal.id}
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-sm">{renewal.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="truncate text-sm font-medium text-[var(--text-primary)]">{renewal.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
                         {format(renewalDate, "dd MMM yyyy")} ·{" "}
                         {formatInr(Number(renewal.amountInr))}
                       </p>
                     </div>
-                    <Badge className={urgencyClass(daysLeft)} variant="outline">
-                      {isToday ? "Today" : daysLeft === 1 ? "Tomorrow" : `${daysLeft}d left`}
-                    </Badge>
+                    <div className="ml-3 flex items-center gap-2">
+                      <Badge className={urgencyClass(daysLeft)} variant="outline">
+                        {isToday ? "Today" : daysLeft === 1 ? "Tomorrow" : `${daysLeft}d left`}
+                      </Badge>
+                      <ChevronRight className="h-4 w-4 text-[var(--text-faint)]" />
+                    </div>
                   </div>
                 )
               })}

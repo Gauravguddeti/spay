@@ -3,15 +3,7 @@ import { differenceInCalendarDays, format, isSameDay } from "date-fns"
 import { CalendarIcon, IndianRupee } from "lucide-react"
 
 import { auth } from "@/auth"
-import { Badge } from "@/components/ui/badge"
 import { CalendarRenewalView } from "@/components/dashboard/CalendarRenewalView"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { getUpcomingRenewals } from "@/lib/db/queries/subscriptions"
 import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 
@@ -24,9 +16,15 @@ function formatInr(amount: string) {
 }
 
 function urgencyClass(daysLeft: number): string {
-  if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
-  if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
-  return "bg-emerald-100 text-emerald-800 border-emerald-200"
+  if (daysLeft <= 3) return "text-[var(--status-danger)]"
+  if (daysLeft <= 7) return "text-[var(--status-warning)]"
+  return "text-[var(--status-success)]"
+}
+
+function urgencyBorderClass(daysLeft: number): string {
+  if (daysLeft <= 3) return "[border-left-color:var(--status-danger)]"
+  if (daysLeft <= 7) return "[border-left-color:var(--status-warning)]"
+  return "[border-left-color:var(--status-success)]"
 }
 
 export default async function CalendarPage() {
@@ -58,15 +56,13 @@ export default async function CalendarPage() {
 
   return (
     <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-        <p className="text-xs font-mono text-muted-foreground">RENEWAL CALENDAR</p>
-        <h1 className="mt-2 font-serif text-3xl">Upcoming Renewals</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          All subscriptions renewing in the next 30 days
-        </p>
+      <div className="rounded-none border bg-[var(--surface-raised)] px-6 py-5 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 [border-color:var(--border-subtle)]">
+        <div className="accent-line" />
+        <h1 className="font-serif text-2xl font-bold tracking-tight text-white">Renewal Calendar</h1>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">Upcoming renewals in the next 30 days</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         {/* Interactive calendar — client component */}
         <CalendarRenewalView
           orgId={organization.id}
@@ -75,13 +71,16 @@ export default async function CalendarPage() {
         />
 
         {/* Renewal list */}
-        <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-          <p className="mb-4 text-xs font-mono text-muted-foreground">NEXT 30 DAYS</p>
+        <div className="rounded-none border bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 [border-color:var(--border-subtle)] lg:border-l lg:[border-left-color:var(--border-subtle)]">
+          <div className="mb-4">
+            <div className="accent-line" />
+            <h2 className="font-serif text-xl font-bold tracking-tight text-white">Next 30 Days</h2>
+          </div>
 
           {renewals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center gap-2 py-16 text-[var(--text-muted)]">
               <CalendarIcon className="h-8 w-8 opacity-40" />
-              <p className="text-sm font-medium">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
                 You&apos;re all clear this month 🎉
               </p>
               <p className="text-xs">No renewals in the next 30 days</p>
@@ -95,38 +94,35 @@ export default async function CalendarPage() {
                 const isToday = isSameDay(renewalDate, today)
 
                 return (
-                  <Card
-                    className={`rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${daysLeft <= 7 ? "border-red-200 bg-red-50/40" : ""}`}
+                  <div
+                    className={`rounded-none border border-l-[3px] px-4 py-3 [background:var(--surface-overlay)] [border-color:var(--border-subtle)] ${urgencyBorderClass(daysLeft)}`}
                     key={renewal.id}
                   >
-                    <CardHeader className="pb-2 pt-4 px-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base font-medium">
-                          {renewal.name}
-                        </CardTitle>
-                        <Badge className={urgencyClass(daysLeft)} variant="outline">
-                          {isToday
-                            ? "Today"
-                            : daysLeft === 1
-                              ? "Tomorrow"
-                              : `${daysLeft}d`}
-                        </Badge>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{renewal.name}</p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {renewal.category ?? "Uncategorized"} · {format(renewalDate, "dd MMM yyyy")}
+                        </p>
+                        <div className="mt-2 flex items-center gap-1 text-sm font-semibold text-[var(--text-accent)]">
+                          <IndianRupee className="h-3.5 w-3.5" />
+                          {formatInr(renewal.amountInr).replace("₹", "")}
+                          <span className="ml-1 text-xs font-normal text-[var(--text-muted)] capitalize">
+                            / {renewal.billingCycle}
+                          </span>
+                        </div>
                       </div>
-                      <CardDescription className="text-xs">
-                        {renewal.category ?? "Uncategorized"} ·{" "}
-                        {format(renewalDate, "dd MMM yyyy")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4">
-                      <div className="flex items-center gap-1 text-sm font-semibold">
-                        <IndianRupee className="h-3.5 w-3.5" />
-                        {formatInr(renewal.amountInr).replace("₹", "")}
-                        <span className="ml-1 text-xs font-normal text-muted-foreground capitalize">
-                          / {renewal.billingCycle}
-                        </span>
+
+                      <div className="shrink-0 text-right">
+                        <p className={`font-display text-2xl font-bold leading-none ${urgencyClass(daysLeft)}`}>
+                          {isToday ? 0 : Math.max(daysLeft, 0)}
+                        </p>
+                        <p className="mt-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                          {isToday ? "Today" : daysLeft === 1 ? "Day left" : "Days left"}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>

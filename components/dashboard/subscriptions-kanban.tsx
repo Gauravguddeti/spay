@@ -349,11 +349,11 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
       {/* Page header */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-none border bg-[var(--surface-raised)] px-6 py-5 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 [border-color:var(--border-subtle)]">
         <div>
-          <p className="text-xs font-mono text-muted-foreground">SUBSCRIPTIONS</p>
-          <h1 className="mt-1 font-serif text-3xl">Your Stack</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Drag cards to update status</p>
+          <div className="accent-line" />
+          <h1 className="font-serif text-2xl font-bold tracking-tight text-white">Your Stack</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Drag cards to update status</p>
         </div>
         <div className="flex items-center gap-3">
           <a

@@ -36,7 +36,7 @@ export function ShellClient({
     .slice(0, 2)
 
   return (
-    <header className="flex items-center justify-between rounded-none border border-border/70 bg-card px-4 py-3 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-2 motion-safe:duration-300 md:px-6">
+    <header className="flex items-center justify-between rounded-none border bg-[var(--surface-raised)] px-4 py-3 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-2 motion-safe:duration-300 [border-color:var(--border-subtle)] md:px-6">
       <div className="flex items-center gap-3">
         <Sheet>
           <SheetTrigger asChild>
@@ -45,7 +45,7 @@ export function ShellClient({
               <span className="sr-only">Open menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent className="w-70 rounded-none border-l-border/70 bg-card" side="left">
+          <SheetContent className="w-72 rounded-none border-r bg-[var(--surface-raised)] p-4 [border-color:var(--border-subtle)]" side="left">
             <SheetHeader className="sr-only">
               <SheetTitle>Navigation Menu</SheetTitle>
               <SheetDescription>Navigate between dashboard sections.</SheetDescription>

@@ -5,6 +5,7 @@ import { differenceInCalendarDays, format } from "date-fns"
 import { IndianRupee, X } from "lucide-react"
 import { toast } from "sonner"
 
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -29,15 +30,15 @@ type Props = {
 }
 
 function urgencyClass(daysLeft: number) {
-  if (daysLeft <= 3) return "bg-red-500/20 text-red-800 border-red-200"
-  if (daysLeft <= 7) return "bg-amber-100 text-amber-800 border-amber-200"
-  return "bg-emerald-100 text-emerald-800 border-emerald-200"
+  if (daysLeft <= 3) return "[background:var(--status-danger-bg)] [border-color:var(--status-danger-border)] text-[var(--status-danger)]"
+  if (daysLeft <= 7) return "[background:var(--status-warning-bg)] [border-color:var(--status-warning-border)] text-[var(--status-warning)]"
+  return "[background:var(--status-success-bg)] [border-color:var(--status-success-border)] text-[var(--status-success)]"
 }
 
 function urgencyDotClass(daysLeft: number) {
-  if (daysLeft <= 7) return "bg-red-500"
-  if (daysLeft <= 30) return "bg-amber-500"
-  return "bg-emerald-500"
+  if (daysLeft <= 3) return "bg-[var(--status-danger)]"
+  if (daysLeft <= 7) return "bg-[var(--status-warning)]"
+  return "bg-[var(--accent-primary)]"
 }
 
 function formatInr(amount: string) {
@@ -89,13 +90,13 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
   }
 
   return (
-    <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+    <div className="rounded-none border bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 [border-color:var(--border-subtle)]">
       <Calendar
         className="rounded-none"
         mode="multiple"
         selected={parsedDates}
         modifiers={{ renewal: parsedDates }}
-        modifiersClassNames={{ renewal: "font-bold text-primary" }}
+        modifiersClassNames={{ renewal: "font-bold text-[var(--accent-primary)]" }}
         components={{
           // Override the day cell to inject popover dots
           // Using 'Day' render prop which is stable in react-day-picker v9
@@ -105,11 +106,17 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
             const items = renewalMap.get(key) ?? []
             const daysLeft = differenceInCalendarDays(date, today)
             const hasRenewal = items.length > 0
+            const isToday = Boolean(dayProps.modifiers?.today)
 
             if (!hasRenewal) {
               return (
                 <td {...dayProps}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-none text-sm">
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-none border border-transparent text-sm text-[var(--text-secondary)]",
+                      isToday && "[background:var(--accent-primary-muted)] [border-color:var(--accent-primary-border)] text-[var(--text-primary)]",
+                    )}
+                  >
                     {date.getDate()}
                   </div>
                 </td>
@@ -121,7 +128,10 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
-                      className="relative flex h-9 w-9 flex-col items-center justify-center gap-0.5 rounded-none text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                      className={cn(
+                        "relative flex h-9 w-9 flex-col items-center justify-center gap-0.5 rounded-none border border-transparent text-sm font-semibold text-[var(--text-primary)] transition-colors hover:[background:var(--surface-overlay)]",
+                        isToday && "[background:var(--accent-primary-muted)] [border-color:var(--accent-primary-border)]",
+                      )}
                       type="button"
                     >
                       <span>{date.getDate()}</span>
@@ -130,22 +140,22 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
                       />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 rounded-none border-border/70 bg-card p-4 shadow-lg">
+                  <PopoverContent className="w-72 rounded-none border bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-lg)] [border-color:var(--border-subtle)]">
                     <div className="space-y-2">
-                      <p className="text-xs font-mono text-muted-foreground">
+                      <p className="text-xs font-mono text-[var(--text-muted)]">
                         {format(date, "dd MMM yyyy")} · {items.length} renewal
                         {items.length !== 1 ? "s" : ""}
                       </p>
                       {items.map((renewal) => (
                         <div
-                          className="flex items-start justify-between gap-2 rounded-none border border-border/70 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+                          className="flex items-start justify-between gap-2 rounded-none border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:[border-color:var(--border-accent)] hover:shadow-[var(--shadow-accent)] [background:var(--surface-overlay)] [border-color:var(--border-subtle)]"
                           key={renewal.id}
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">
+                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                               {renewal.name}
                             </p>
-                            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
                               <IndianRupee className="h-3 w-3" />
                               <span>
                                 {formatInr(renewal.amountInr).replace("₹", "")}
@@ -167,7 +177,7 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
                                   : `${daysLeft}d`}
                             </Badge>
                             <button
-                              className="flex items-center gap-1 rounded-none bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1 rounded-none border px-2 py-1 text-xs transition-colors disabled:opacity-50 [background:var(--status-danger-bg)] [border-color:var(--status-danger-border)] text-[var(--status-danger)] hover:opacity-90"
                               disabled={cancellingId === renewal.id}
                               onClick={() => void handleCancel(renewal.id)}
                               type="button"

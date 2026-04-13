@@ -10,13 +10,21 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          'border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
+          'border-[var(--border-default)] [background:var(--surface-overlay)] text-[var(--text-secondary)]',
         secondary:
-          'border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
+          'border-[var(--status-success-border)] [background:var(--status-success-bg)] text-[var(--status-success)]',
         destructive:
-          'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
+          'border-[var(--status-danger-border)] [background:var(--status-danger-bg)] text-[var(--status-danger)] [a&]:hover:opacity-90',
         outline:
-          'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+          'border-[var(--border-default)] [background:var(--surface-overlay)] text-[var(--text-secondary)]',
+        success:
+          'border-[var(--status-success-border)] [background:var(--status-success-bg)] text-[var(--status-success)]',
+        active:
+          'border-[var(--status-success-border)] [background:var(--status-success-bg)] text-[var(--status-success)]',
+        warning:
+          'border-[var(--status-warning-border)] [background:var(--status-warning-bg)] text-[var(--status-warning)]',
+        danger:
+          'border-[var(--status-danger-border)] [background:var(--status-danger-bg)] text-[var(--status-danger)]',
       },
     },
     defaultVariants: {

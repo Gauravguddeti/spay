@@ -246,12 +246,10 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
 
   return (
     <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-        <p className="text-xs font-mono text-muted-foreground">INTEGRATIONS</p>
-        <h1 className="mt-2 font-serif text-3xl">Connect Gmail</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Automatically detect SaaS subscriptions from your inbox
-        </p>
+      <div className="rounded-none border bg-[var(--surface-raised)] px-6 py-5 shadow-[var(--shadow-sm)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 [border-color:var(--border-subtle)]">
+        <div className="accent-line" />
+        <h1 className="font-serif text-2xl font-bold tracking-tight text-white">Connect</h1>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">Import subscriptions automatically</p>
       </div>
 
       <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">

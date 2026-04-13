@@ -9,9 +9,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   const classNames = {
     toast:
-      'rounded-none border border-border/70 bg-card text-card-foreground shadow-sm',
+      'rounded-none border [background:var(--surface-overlay)] [border-color:var(--border-accent)] text-[var(--text-primary)] shadow-[var(--shadow-md)] [&[data-type=success]]:border-l-[3px] [&[data-type=success]]:border-l-[var(--accent-primary)]',
     title: 'font-medium text-sm',
-    description: 'text-xs text-muted-foreground',
+    description: 'text-xs text-[var(--text-muted)]',
+    success: '[&_[data-icon]]:text-[var(--accent-primary)]',
     actionButton: 'rounded-none',
     cancelButton: 'rounded-none',
     ...(props.toastOptions?.classNames ?? {}),
@@ -29,9 +30,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={toastOptions}
       style={
         {
-          '--normal-bg': 'var(--popover)',
-          '--normal-text': 'var(--popover-foreground)',
-          '--normal-border': 'var(--border)',
+          '--normal-bg': 'var(--surface-overlay)',
+          '--normal-text': 'var(--text-primary)',
+          '--normal-border': 'var(--border-accent)',
         } as CSSProperties
       }
       {...props}
