@@ -36,11 +36,11 @@ export function ShellClient({
     .slice(0, 2)
 
   return (
-    <header className="flex items-center justify-between rounded-none border border-border/70 bg-card px-4 py-3 shadow-sm md:px-6">
+    <header className="flex items-center justify-between rounded-none border border-border/70 bg-card px-4 py-3 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-2 motion-safe:duration-300 md:px-6">
       <div className="flex items-center gap-3">
         <Sheet>
           <SheetTrigger asChild>
-            <Button className="md:hidden rounded-none" size="icon" variant="outline">
+            <Button className="md:hidden rounded-none transition-all duration-200 hover:-translate-y-0.5" size="icon" variant="outline">
               <Menu className="h-4 w-4" />
               <span className="sr-only">Open menu</span>
             </Button>
@@ -66,12 +66,12 @@ export function ShellClient({
           <p className="text-xs text-muted-foreground">{userEmail}</p>
         </div>
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-none border border-border bg-secondary text-sm font-medium">
+        <div className="flex h-10 w-10 items-center justify-center rounded-none border border-border bg-secondary text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
           {initials}
         </div>
 
         <Button
-          className="rounded-none"
+          className="rounded-none transition-all duration-200 hover:-translate-y-0.5"
           onClick={async () => {
             await authClient.signOut()
             window.location.href = "/login"

@@ -89,7 +89,7 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
   }
 
   return (
-    <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm">
+    <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
       <Calendar
         className="rounded-none"
         mode="multiple"
@@ -138,7 +138,7 @@ export function CalendarRenewalView({ renewalDates: _renewalDates, renewals, org
                       </p>
                       {items.map((renewal) => (
                         <div
-                          className="flex items-start justify-between gap-2 rounded-none border border-border/70 p-3"
+                          className="flex items-start justify-between gap-2 rounded-none border border-border/70 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
                           key={renewal.id}
                         >
                           <div className="min-w-0">

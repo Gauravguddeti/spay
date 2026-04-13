@@ -291,9 +291,9 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
   }
 
   return (
-    <div>
+    <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
       {/* Page header */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <div>
           <p className="text-xs font-mono text-muted-foreground">SUBSCRIPTIONS</p>
           <h1 className="mt-1 font-serif text-3xl">Your Stack</h1>
@@ -338,18 +338,20 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
       </div>
 
       {/* Kanban Board */}
-      <KanbanBoard
-        columns={initialColumns}
-        onTaskMove={handleTaskMove}
-        onTaskEdit={handleTaskEdit}
-        onTaskDelete={handleTaskDelete}
-        allowAddTask={false}
-        columnColors={{
-          active: "bg-emerald-500",
-          paused: "bg-amber-500",
-          cancelled: "bg-red-500",
-        }}
-      />
+      <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+        <KanbanBoard
+          columns={initialColumns}
+          onTaskMove={handleTaskMove}
+          onTaskEdit={handleTaskEdit}
+          onTaskDelete={handleTaskDelete}
+          allowAddTask={false}
+          columnColors={{
+            active: "bg-emerald-500",
+            paused: "bg-amber-500",
+            cancelled: "bg-red-500",
+          }}
+        />
+      </div>
 
       {/* Add / Edit Modal */}
       <AddSubscriptionModal

@@ -122,8 +122,8 @@ export default async function DashboardPage() {
     <>
       {showOnboarding && <OnboardingWizard orgName={orgName} />}
 
-      <section className="space-y-4">
-        <div className="flex items-start justify-between rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+        <div className="flex items-start justify-between rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <div>
             <p className="text-xs font-mono text-muted-foreground">SPEND OVERVIEW</p>
             <h1 className="mt-2 font-serif text-3xl">Dashboard</h1>
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Monthly Spend
@@ -152,7 +152,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Active Subscriptions
@@ -164,7 +164,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Renewing Soon
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-2">
               <CardDescription className="text-[10px] font-mono uppercase tracking-widest">
                 Potential Savings
@@ -193,7 +193,7 @@ export default async function DashboardPage() {
 
         {/* Conversational AI Insights */}
         {insights.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground px-1">
               SPAY INSIGHT
             </p>
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
 
         {/* Empty state */}
         {isEmpty && (
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardContent className="flex flex-col items-center justify-center gap-4 py-16 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-none bg-secondary">
                 <LayoutDashboard className="h-8 w-8 text-primary" />
@@ -245,7 +245,7 @@ export default async function DashboardPage() {
 
         {/* Upcoming Renewals */}
         {next3Renewals.length > 0 && (
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader className="pb-3">
               <CardDescription className="text-xs font-mono uppercase tracking-wide">
                 UPCOMING RENEWALS

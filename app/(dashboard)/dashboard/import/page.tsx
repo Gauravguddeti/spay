@@ -83,9 +83,9 @@ export default function ImportPage() {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
       {/* Page header */}
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <p className="text-xs font-mono text-muted-foreground">IMPORT</p>
         <h1 className="mt-2 font-serif text-3xl">Upload Bank Statement</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -96,10 +96,10 @@ export default function ImportPage() {
       {/* Upload zone */}
       {uploadState !== "done" && (
         <label
-          className={`flex flex-col items-center justify-center gap-4 rounded-none border-2 border-dashed bg-card px-6 py-16 text-center shadow-sm transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center gap-4 rounded-none border-2 border-dashed bg-card px-6 py-16 text-center shadow-sm transition-all duration-200 cursor-pointer ${
             isDragging
               ? "border-primary bg-primary/5"
-              : "border-border hover:border-primary/50 hover:bg-muted/30"
+              : "border-border hover:border-primary/50 hover:bg-muted/30 hover:-translate-y-0.5"
           } ${uploadState === "uploading" ? "pointer-events-none opacity-60" : ""}`}
           htmlFor="pdf-upload"
           onDragEnter={(e) => { e.preventDefault(); setIsDragging(true) }}

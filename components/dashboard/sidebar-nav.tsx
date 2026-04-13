@@ -16,7 +16,7 @@ export function SidebarNav({ mobile = false }: { mobile?: boolean }) {
     <>
       <div
         className={cn(
-          "border-b border-border/70",
+          "border-b border-border/70 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300",
           mobile ? "mb-6 pt-6 pb-6" : "mb-6 pt-2 pb-6",
         )}
       >
@@ -26,14 +26,19 @@ export function SidebarNav({ mobile = false }: { mobile?: boolean }) {
         </p>
       </div>
 
-      <nav className={cn("space-y-1", mobile && "mt-4")}>
-        {navItems.map((item) => (
-          <NavLink
+      <nav className={cn("space-y-1 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300", mobile && "mt-4")}>
+        {navItems.map((item, index) => (
+          <div
             key={item.href}
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-          />
+            className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300"
+            style={{ animationDelay: `${index * 45}ms` }}
+          >
+            <NavLink
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+            />
+          </div>
         ))}
       </nav>
     </>

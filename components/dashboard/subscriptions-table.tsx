@@ -142,14 +142,14 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
   }
 
   return (
-    <section className="rounded-none border border-border/70 bg-card p-4 shadow-sm md:p-6">
+    <section className="rounded-none border border-border/70 bg-card p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-mono text-muted-foreground">SUBSCRIPTIONS</p>
           <h2 className="font-serif text-3xl">All Tools</h2>
         </div>
         <Button
-          className="rounded-none"
+          className="rounded-none transition-all duration-200 hover:-translate-y-0.5"
           onClick={() => {
             setMode("add")
             setEditing(null)
@@ -182,7 +182,10 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
             </TableRow>
           ) : (
             subscriptions.map((subscription) => (
-              <TableRow key={subscription.id}>
+              <TableRow
+                key={subscription.id}
+                className="transition-colors duration-200 hover:bg-muted/40"
+              >
                 <TableCell className="font-medium">{subscription.name}</TableCell>
                 <TableCell>{subscription.category ?? "-"}</TableCell>
                 <TableCell>{formatInr(Number(subscription.amountInr))}</TableCell>
@@ -196,6 +199,7 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
                 <TableCell>
                   <div className="flex justify-end gap-2">
                     <Button
+                      className="transition-all duration-200 hover:-translate-y-0.5"
                       onClick={() => {
                         setMode("edit")
                         setEditing(subscription)
@@ -208,6 +212,7 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
                       Edit
                     </Button>
                     <Button
+                      className="transition-all duration-200 hover:-translate-y-0.5"
                       onClick={() => setDeleting(subscription)}
                       size="sm"
                       variant="outline"

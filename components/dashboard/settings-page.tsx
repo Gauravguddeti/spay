@@ -171,8 +171,8 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
   }
 
   return (
-    <section className="space-y-4">
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+    <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <p className="text-xs font-mono text-muted-foreground">SETTINGS</p>
         <h1 className="mt-2 font-serif text-3xl">Settings</h1>
       </div>
@@ -188,7 +188,7 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
         {/* ── TAB 1: Profile ── */}
         <TabsContent className="mt-4 space-y-4" value="profile">
           {/* Display name */}
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader>
               <CardTitle className="text-lg">Display Name</CardTitle>
               <CardDescription>Your name shown across the dashboard</CardDescription>
@@ -225,7 +225,7 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
           </Card>
 
           {/* Change password */}
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader>
               <CardTitle className="text-lg">Change Password</CardTitle>
               <CardDescription>Use at least 8 characters</CardDescription>
@@ -283,7 +283,7 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
 
         {/* ── TAB 2: Organization ── */}
         <TabsContent className="mt-4" value="organization">
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader>
               <CardTitle className="text-lg">Organization</CardTitle>
               <CardDescription>Manage your workspace details</CardDescription>
@@ -419,7 +419,7 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
         {/* ── TAB 4: Danger Zone ── */}
         <TabsContent className="mt-4 space-y-4" value="danger">
           {/* Delete all subscriptions */}
-          <Card className="rounded-none border-red-200 bg-red-50/30">
+          <Card className="rounded-none border-red-200 bg-red-50/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader>
               <CardTitle className="text-lg text-red-700">Delete All Subscriptions</CardTitle>
               <CardDescription>
@@ -461,7 +461,7 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
           </Card>
 
           {/* Delete account */}
-          <Card className="rounded-none border-red-200 bg-red-50/30">
+          <Card className="rounded-none border-red-200 bg-red-50/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader>
               <CardTitle className="text-lg text-red-700">Delete Account</CardTitle>
               <CardDescription>

@@ -141,9 +141,9 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
     unused.length === 0 && duplicates.length === 0 && risks.length === 0
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
       {/* Header */}
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <p className="text-xs font-mono text-muted-foreground">INSIGHTS</p>
         <h1 className="mt-2 font-serif text-3xl">Spend Insights</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -153,7 +153,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Potential savings banner */}
       {potentialSavings > 0 && (
-        <div className="rounded-none border border-primary/30 bg-primary/5 px-6 py-5 shadow-sm">
+        <div className="rounded-none border border-primary/30 bg-primary/5 px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <div className="flex items-center gap-3">
             <TrendingUp className="h-6 w-6 text-primary shrink-0" />
             <div>
@@ -173,7 +173,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Empty state */}
       {subscriptions.length === 0 && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground opacity-40" />
             <p className="font-medium">Add more subscriptions to unlock insights</p>
@@ -189,7 +189,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* All insights dismissed */}
       {subscriptions.length > 0 && noInsights && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <CheckCircle className="mb-3 h-10 w-10 text-emerald-500" />
             <p className="font-medium">Looking great! No issues found</p>
@@ -202,7 +202,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 1 — Unused Subscriptions */}
       {unused.length > 0 && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -260,7 +260,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 2 — Duplicate Tools */}
       {duplicates.length > 0 && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardHeader>
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               SECTION 2
@@ -320,7 +320,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 3 — Monthly Spend Trend */}
       {subscriptions.length > 0 && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardHeader>
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               SECTION 3

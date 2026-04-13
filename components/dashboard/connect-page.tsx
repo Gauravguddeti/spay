@@ -145,8 +145,8 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
   }
 
   return (
-    <section className="space-y-4">
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+    <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <p className="text-xs font-mono text-muted-foreground">INTEGRATIONS</p>
         <h1 className="mt-2 font-serif text-3xl">Connect Gmail</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -154,7 +154,7 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
         </p>
       </div>
 
-      <Card className="rounded-none border-border/70">
+      <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-none bg-red-500/20">
@@ -241,7 +241,7 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
       )}
 
       {detected !== null && !importDone && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardHeader>
             <CardTitle className="text-base">
               {detected.length === 0
@@ -260,8 +260,8 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
                 const isSelected = selected.has(sub.vendorKey)
                 return (
                   <button
-                    className={`flex w-full items-center gap-3 rounded-none border px-4 py-3 text-left transition-colors ${
-                      isSelected ? "border-primary bg-primary/5" : "border-border/70 hover:bg-muted/50"
+                    className={`flex w-full items-center gap-3 rounded-none border px-4 py-3 text-left transition-all duration-200 ${
+                      isSelected ? "border-primary bg-primary/5" : "border-border/70 hover:bg-muted/50 hover:-translate-y-0.5"
                     }`}
                     key={sub.vendorKey}
                     onClick={() => toggleVendor(sub.vendorKey)}

@@ -57,8 +57,8 @@ export default async function CalendarPage() {
   }))
 
   return (
-    <section className="space-y-4">
-      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm">
+    <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+      <div className="rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
         <p className="text-xs font-mono text-muted-foreground">RENEWAL CALENDAR</p>
         <h1 className="mt-2 font-serif text-3xl">Upcoming Renewals</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ export default async function CalendarPage() {
         />
 
         {/* Renewal list */}
-        <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm">
+        <div className="rounded-none border border-border/70 bg-card p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <p className="mb-4 text-xs font-mono text-muted-foreground">NEXT 30 DAYS</p>
 
           {renewals.length === 0 ? (
@@ -96,7 +96,7 @@ export default async function CalendarPage() {
 
                 return (
                   <Card
-                    className={`rounded-none border-border/70 ${daysLeft <= 7 ? "border-red-200 bg-red-50/40" : ""}`}
+                    className={`rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${daysLeft <= 7 ? "border-red-200 bg-red-50/40" : ""}`}
                     key={renewal.id}
                   >
                     <CardHeader className="pb-2 pt-4 px-4">

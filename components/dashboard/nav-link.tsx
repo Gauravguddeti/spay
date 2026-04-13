@@ -42,10 +42,10 @@ export function NavLink({ href, label, icon }: NavLinkProps) {
   return (
     <Link
       className={cn(
-        "flex items-center gap-2 rounded-none px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-colors",
+        "flex items-center gap-2 rounded-none px-3 py-2 text-sm font-semibold uppercase tracking-wider transition-all duration-200",
         isActive
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:translate-x-0.5",
       )}
       href={href}
     >

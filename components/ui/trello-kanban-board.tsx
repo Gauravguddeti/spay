@@ -184,7 +184,7 @@ export function KanbanBoard({
                     onDragStart={() => handleDragStart(task, column.id)}
                     onDragEnd={() => setDraggedTask(null)}
                     className={cn(
-                      "group cursor-grab rounded-none border border-border bg-card p-3 shadow-sm transition-all duration-150",
+                      "group cursor-grab rounded-none border border-border bg-card p-3 shadow-sm transition-all duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
                       "hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing",
                       isDragging && "rotate-2 opacity-50",
                     )}
