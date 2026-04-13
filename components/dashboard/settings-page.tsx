@@ -332,7 +332,7 @@ export function SettingsPageClient({ initialData }: { initialData: SettingsIniti
 
         {/* ── TAB 3: Notifications ── */}
         <TabsContent className="mt-4" value="notifications">
-          <Card className="rounded-none border-border/70">
+          <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
             <CardHeader>
               <CardTitle className="text-lg">Notifications</CardTitle>
               <CardDescription>

@@ -2,7 +2,7 @@ import { SkeletonCard } from "@/components/ui/SkeletonCard"
 
 export default function DashboardLoading() {
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
       {/* Header bar skeleton */}
       <div className="flex items-start justify-between rounded-none border border-border/70 bg-card px-6 py-5 shadow-sm animate-pulse">
         <div>

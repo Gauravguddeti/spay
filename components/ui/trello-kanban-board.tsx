@@ -11,6 +11,8 @@ export interface KanbanTask {
   description?: string
   labels?: string[]
   assignee?: string
+  highlighted?: boolean
+  removing?: boolean
 }
 
 export interface KanbanColumn {
@@ -184,8 +186,11 @@ export function KanbanBoard({
                     onDragStart={() => handleDragStart(task, column.id)}
                     onDragEnd={() => setDraggedTask(null)}
                     className={cn(
-                      "group cursor-grab rounded-none border border-border bg-card p-3 shadow-sm transition-all duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+                      "group cursor-grab rounded-none border border-border bg-card p-3 shadow-sm transition-all duration-300 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
                       "hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing",
+                      task.highlighted &&
+                        "ring-2 ring-primary/60 bg-primary/5 motion-safe:animate-[pulse_1.4s_ease-in-out_2]",
+                      task.removing && "pointer-events-none scale-[0.98] -translate-y-1 opacity-0",
                       isDragging && "rotate-2 opacity-50",
                     )}
                   >
@@ -214,7 +219,7 @@ export function KanbanBoard({
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onTaskEdit(task.id); }}
-                            className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                            className="text-muted-foreground hover:text-foreground transition-all duration-200 p-1 hover:-translate-y-0.5"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -223,7 +228,7 @@ export function KanbanBoard({
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onTaskDelete(task.id); }}
-                            className="text-muted-foreground hover:text-red-500 transition-colors p-1"
+                            className="text-muted-foreground hover:text-red-500 transition-all duration-200 p-1 hover:-translate-y-0.5"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

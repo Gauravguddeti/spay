@@ -73,6 +73,9 @@ function normalizeSubscription(input: SubscriptionPayload): Subscription {
 export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscription[] }) {
   const router = useRouter()
   const [subscriptionItems, setSubscriptionItems] = useState<Subscription[]>(subscriptions)
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set())
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
+  const highlightTimeoutsRef = React.useRef<Map<string, number>>(new Map())
 
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit">("add")
@@ -88,12 +91,46 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
     setSubscriptionItems(subscriptions)
   }, [subscriptions])
 
+  function markSubscriptionHighlighted(subscriptionId: string) {
+    setHighlightedIds((prev) => {
+      const next = new Set(prev)
+      next.add(subscriptionId)
+      return next
+    })
+
+    const existingTimeout = highlightTimeoutsRef.current.get(subscriptionId)
+    if (existingTimeout) {
+      window.clearTimeout(existingTimeout)
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHighlightedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(subscriptionId)
+        return next
+      })
+      highlightTimeoutsRef.current.delete(subscriptionId)
+    }, 2200)
+
+    highlightTimeoutsRef.current.set(subscriptionId, timeoutId)
+  }
+
+  useEffect(() => {
+    return () => {
+      for (const timeoutId of highlightTimeoutsRef.current.values()) {
+        window.clearTimeout(timeoutId)
+      }
+      highlightTimeoutsRef.current.clear()
+    }
+  }, [])
+
   useEffect(() => {
     function onSubscriptionAdded(event: Event) {
       const detail = (event as CustomEvent<SubscriptionPayload>).detail
       if (!detail?.id) return
 
       const incoming = normalizeSubscription(detail)
+      markSubscriptionHighlighted(incoming.id)
       setSubscriptionItems((prev) => {
         const existingIndex = prev.findIndex((item) => item.id === incoming.id)
         if (existingIndex === -1) {
@@ -160,6 +197,7 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
 
     if (result.subscription) {
       const incoming = normalizeSubscription(result.subscription)
+      markSubscriptionHighlighted(incoming.id)
       setSubscriptionItems((prev) => {
         if (modalMode === "add") {
           return [incoming, ...prev]
@@ -175,13 +213,24 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
 
   async function handleDelete() {
     if (!deleting) return
+    const deletingSubscription = deleting
     const previousSubscriptions = subscriptionItems
 
     setIsDeleting(true)
-    setSubscriptionItems((prev) => prev.filter((subscription) => subscription.id !== deleting.id))
+    setRemovingIds((prev) => {
+      const next = new Set(prev)
+      next.add(deletingSubscription.id)
+      return next
+    })
+
+    // Let the card animate out before removing it from the board state.
+    await new Promise((resolve) => setTimeout(resolve, 180))
+    setSubscriptionItems((prev) =>
+      prev.filter((subscription) => subscription.id !== deletingSubscription.id),
+    )
 
     try {
-      const response = await fetch(`/api/subscriptions/${deleting.id}`, { method: "DELETE" })
+      const response = await fetch(`/api/subscriptions/${deletingSubscription.id}`, { method: "DELETE" })
       if (!response.ok) {
         const result = (await response.json()) as { error?: string }
         setSubscriptionItems(previousSubscriptions)
@@ -191,6 +240,11 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
       toast.success("Subscription deleted")
       setDeleting(null)
     } finally {
+      setRemovingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(deletingSubscription.id)
+        return next
+      })
       setIsDeleting(false)
     }
   }
@@ -202,6 +256,8 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
       description: `${formatInr(s.amountInr)}/mo`,
       labels: s.category ? [s.category] : [],
       assignee: s.notes ? "📝" : undefined,
+      highlighted: highlightedIds.has(s.id),
+      removing: removingIds.has(s.id),
     })
     return [
       {
@@ -220,7 +276,7 @@ export function SubscriptionsKanban({ subscriptions }: { subscriptions: Subscrip
         tasks: subscriptionItems.filter((s) => s.status === "cancelled").map(mapSub),
       },
     ]
-  }, [subscriptionItems])
+  }, [subscriptionItems, highlightedIds, removingIds])
 
   const handleTaskMove = (taskId: string, fromCol: string, toCol: string) => {
     if (fromCol === toCol) return

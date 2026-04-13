@@ -114,6 +114,32 @@
     }
   }
 
+  @keyframes toastEnter {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      filter: blur(2px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes toastExit {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+      filter: blur(2px);
+    }
+  }
+
   .marketing-page {
     overflow-x: hidden;
   }
@@ -194,6 +220,24 @@
     .marquee-inner {
       gap: 2rem;
     }
+  }
+}
+
+[data-sonner-toast] {
+  border-radius: 0 !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast][data-mounted="true"] {
+    animation: toastEnter 220ms cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  [data-sonner-toaster][data-y-position="top"] [data-sonner-toast][data-mounted="true"] {
+    animation: toastEnter 220ms cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  [data-sonner-toast][data-removed="true"] {
+    animation: toastExit 180ms ease forwards;
   }
 }
 

@@ -40,7 +40,7 @@ const MonthlySpendTrendChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[220px] w-full animate-pulse rounded-none bg-muted" />
+      <div className="h-[220px] w-full animate-pulse rounded-none bg-muted motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300" />
     ),
   },
 )
@@ -338,7 +338,7 @@ export function InsightsPageClient({ subscriptions }: { subscriptions: RawSub[] 
 
       {/* Section 4 — Renewal Risk */}
       {risks.length > 0 && (
-        <Card className="rounded-none border-border/70">
+        <Card className="rounded-none border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
           <CardHeader>
             <CardDescription className="text-xs font-mono uppercase tracking-wide">
               SECTION 4
