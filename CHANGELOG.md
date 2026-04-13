@@ -7,6 +7,7 @@
 - Made dashboard Gmail connected-state checks scope-aware so accounts without `gmail.readonly` are treated as not connected.
 - Added post-OAuth `rescan=1` handling to auto-trigger a single inbox scan after reconnect.
 - Prevented infinite reconnect loops by persisting reconnect attempts across OAuth redirects and surfacing actionable guidance after retry cap is reached.
+- Fixed INVALID_STATE_FORMAT error in Gmail OAuth callback caused by query params in callbackURL.
 
 ## 2026-04-12
 - Performance stabilization pass (A + B):

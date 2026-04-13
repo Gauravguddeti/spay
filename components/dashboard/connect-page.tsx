@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, CheckCircle2, Circle, ExternalLink, Loader2, Mail, PlugZap } from "lucide-react"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth/client"
@@ -29,6 +28,8 @@ const GOOGLE_GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
 ]
 const MAX_AUTO_RECONNECT_ATTEMPTS = 1
+const GMAIL_RESCAN_INTENT_KEY = "spay_gmail_rescan"
+const GMAIL_RECONNECT_ATTEMPT_KEY = "spay_gmail_reconnect_attempt"
 
 function getReconnectGuidance(message?: string): string {
   const normalized = String(message ?? "").toLowerCase()
@@ -48,6 +49,42 @@ function parseReconnectAttempt(value: string | null): number {
   return Math.floor(parsed)
 }
 
+function readReconnectAttemptFromSession(): number {
+  if (typeof window === "undefined") {
+    return 0
+  }
+
+  return parseReconnectAttempt(window.sessionStorage.getItem(GMAIL_RECONNECT_ATTEMPT_KEY))
+}
+
+function clearReconnectStateInSession() {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.sessionStorage.removeItem(GMAIL_RESCAN_INTENT_KEY)
+  window.sessionStorage.removeItem(GMAIL_RECONNECT_ATTEMPT_KEY)
+}
+
+function setReconnectStateInSession(reconnectAttempt: number) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.sessionStorage.setItem(GMAIL_RESCAN_INTENT_KEY, "1")
+  window.sessionStorage.setItem(GMAIL_RECONNECT_ATTEMPT_KEY, String(reconnectAttempt))
+}
+
+function readAndConsumeRescanIntentFromSession(): boolean {
+  if (typeof window === "undefined") {
+    return false
+  }
+
+  const shouldRescan = window.sessionStorage.getItem(GMAIL_RESCAN_INTENT_KEY) === "1"
+  window.sessionStorage.removeItem(GMAIL_RESCAN_INTENT_KEY)
+  return shouldRescan
+}
+
 function confidenceLabel(score: number): string {
   if (score >= 0.9) return "High"
   if (score >= 0.7) return "Medium"
@@ -61,12 +98,10 @@ function confidenceClass(score: number): string {
 }
 
 export function ConnectPageClient({ gmailEnabled = true, initialConnected = false }: { gmailEnabled?: boolean, initialConnected?: boolean }) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const hasTriggeredAutoRescan = useRef(false)
-  const reconnectAttemptFromQuery = parseReconnectAttempt(searchParams.get("reconnectAttempt"))
-  const reconnectAttempts = useRef(reconnectAttemptFromQuery)
+  const reconnectAttempts = useRef(0)
   const [isGmailConnected, setIsGmailConnected] = useState(initialConnected)
+  const [shouldAutoRescan, setShouldAutoRescan] = useState(false)
 
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -74,8 +109,6 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
-
-  const shouldAutoRescan = searchParams.get("rescan") === "1"
 
   function startGoogleConnect(callbackURL: string) {
     void authClient.linkSocial({
@@ -100,6 +133,7 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
         if (data.error === "GMAIL_NOT_CONNECTED") {
           setIsGmailConnected(false)
           reconnectAttempts.current = 0
+          clearReconnectStateInSession()
           const actionableMessage =
             "Gmail is not connected. Click Connect Gmail and approve Gmail read-only access before rescanning."
           setScanError(actionableMessage)
@@ -116,7 +150,8 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
             toast.info(
               `Refreshing Gmail connection (${nextAttempt}/${MAX_AUTO_RECONNECT_ATTEMPTS})...`,
             )
-            startGoogleConnect(`/dashboard/connect?rescan=1&reconnectAttempt=${nextAttempt}`)
+            setReconnectStateInSession(nextAttempt)
+            startGoogleConnect("/dashboard/connect")
           } else {
             const actionableMessage = getReconnectGuidance(data.message)
             setScanError(actionableMessage)
@@ -132,6 +167,7 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
       }
 
       reconnectAttempts.current = 0
+  clearReconnectStateInSession()
       setScanError(null)
       setDetected(data.subscriptions ?? [])
       const preSelected = new Set(
@@ -149,15 +185,20 @@ export function ConnectPageClient({ gmailEnabled = true, initialConnected = fals
   }, [])
 
   useEffect(() => {
+    reconnectAttempts.current = readReconnectAttemptFromSession()
+    setShouldAutoRescan(readAndConsumeRescanIntentFromSession())
+  }, [])
+
+  useEffect(() => {
     if (!shouldAutoRescan || !isGmailConnected || scanning || hasTriggeredAutoRescan.current) {
       return
     }
 
     hasTriggeredAutoRescan.current = true
+    setShouldAutoRescan(false)
     setScanError(null)
     void handleScan()
-    router.replace("/dashboard/connect")
-  }, [handleScan, isGmailConnected, router, scanning, shouldAutoRescan])
+  }, [handleScan, isGmailConnected, scanning, shouldAutoRescan])
 
   function toggleVendor(key: string) {
     setSelected((prev) => {
@@ -264,6 +305,8 @@ AUTH_GOOGLE_SECRET=your_google_client_secret`}</pre>
               className="rounded-none"
               onClick={() => {
                 reconnectAttempts.current = 0
+                clearReconnectStateInSession()
+                setShouldAutoRescan(false)
                 setScanError(null)
                 startGoogleConnect("/dashboard/connect")
               }}
