@@ -36,13 +36,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <DashboardShell
-      orgName={organizationName}
-      userEmail={session.user.email}
-      userName={session.user.name ?? "Founder"}
-    >
+    <>
+      <DashboardShell
+        orgName={organizationName}
+        userEmail={session.user.email}
+        userName={session.user.name ?? "Founder"}
+      >
+        {children}
+      </DashboardShell>
       <GlobalQuickAddLazy />
-      {children}
-    </DashboardShell>
+    </>
   )
 }
