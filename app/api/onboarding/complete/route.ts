@@ -8,11 +8,7 @@ import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 
 const BodySchema = z.object({
   organizationName: z.string().min(2).max(120).optional(),
-  whatsappNumber: z
-    .string()
-    .regex(/^\+[1-9]\d{7,14}$/, "Must be E.164 format, e.g. +919876543210")
-    .optional()
-    .nullable(),
+
   alertPreferences: z
     .object({ days30: z.boolean(), days7: z.boolean(), days1: z.boolean() })
     .optional()
@@ -44,9 +40,7 @@ export async function POST(request: Request) {
         ...(parsed.success && parsed.data.organizationName
           ? { name: parsed.data.organizationName.trim() }
           : {}),
-        ...(parsed.success && parsed.data.whatsappNumber !== undefined
-          ? { whatsappNumber: parsed.data.whatsappNumber }
-          : {}),
+
         ...(parsed.success && parsed.data.alertPreferences !== undefined
           ? { alertPreferences: parsed.data.alertPreferences }
           : {}),

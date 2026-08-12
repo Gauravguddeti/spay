@@ -5,14 +5,13 @@ import { differenceInCalendarDays } from "date-fns"
 
 import { db } from "@/lib/db"
 import { organizations, renewalAlerts, subscriptions, users } from "@/lib/db/schema"
-import { sendWhatsAppAlert } from "@/lib/notifications/whatsapp"
 import type { AlertPreferences } from "@/lib/db/schema"
 
 /**
  * POST /api/alerts/send
  *
- * Queries all unsent renewal_alerts where alert_date = today, sends WhatsApp
- * messages, and marks them as sent. Called by Vercel Cron at 3:30 AM UTC (9 AM IST).
+ * Queries all unsent renewal_alerts where alert_date = today, and
+ * marks them as sent. Currently mocks email digest delivery since WhatsApp is removed.
  *
  * Protected by CRON_SECRET header to prevent unauthorized invocation.
  */
@@ -129,9 +128,10 @@ export async function POST(request: Request) {
       ].join("\n")
 
       try {
-        await sendWhatsAppAlert(row.whatsappNumber, message)
+        // [Email Digest delivery would go here]
+        console.log(`[Email Digest Mock] Sending alert to ${row.userName} for ${row.subscriptionName}: ${message.replace(/\n/g, ' ')}`)
 
-        // Mark alert as sent — only on success (Correction 4)
+        // Mark alert as sent
         await db
           .update(renewalAlerts)
           .set({ sentAt: new Date() })

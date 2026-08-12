@@ -16,24 +16,17 @@ const DEFAULT_ALERT_PREFERENCES = { days30: true, days7: true, days1: false }
 
 function buildLocalDemoOrganization(overrides?: {
   name?: string
-  whatsappNumber?: string | null
   alertPreferences?: { days30: boolean; days7: boolean; days1: boolean } | null
 }) {
   return {
     id: "local-demo-org",
     name: overrides?.name ?? "Demo Organization",
-    whatsappNumber: overrides?.whatsappNumber ?? null,
     alertPreferences: overrides?.alertPreferences ?? DEFAULT_ALERT_PREFERENCES,
   }
 }
 
 const UpdateOrgSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  whatsappNumber: z
-    .string()
-    .regex(/^\+[1-9]\d{7,14}$/, "Must be E.164 format, e.g. +919876543210")
-    .optional()
-    .nullable(),
   alertPreferences: z
     .object({ days30: z.boolean(), days7: z.boolean(), days1: z.boolean() })
     .optional()
@@ -60,7 +53,7 @@ export async function GET() {
   return NextResponse.json({ organization })
 }
 
-/** PATCH /api/organizations — update name, whatsapp, alert prefs */
+/** PATCH /api/organizations — update name, alert prefs */
 export async function PATCH(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -85,7 +78,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       organization: buildLocalDemoOrganization({
         name: parsed.data.name,
-        whatsappNumber: parsed.data.whatsappNumber,
         alertPreferences: parsed.data.alertPreferences ?? DEFAULT_ALERT_PREFERENCES,
       }),
     })
@@ -99,7 +91,6 @@ export async function PATCH(req: NextRequest) {
 
   const updateData: Record<string, unknown> = {}
   if (parsed.data.name !== undefined) updateData.name = parsed.data.name
-  if (parsed.data.whatsappNumber !== undefined) updateData.whatsappNumber = parsed.data.whatsappNumber
   if (parsed.data.alertPreferences !== undefined) updateData.alertPreferences = parsed.data.alertPreferences
 
   if (Object.keys(updateData).length === 0) {

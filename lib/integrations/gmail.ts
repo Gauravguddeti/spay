@@ -2,14 +2,17 @@
  * Gmail integration utility for SPAY.
  *
  * Handles:
- * - Access token refresh (Google tokens expire after 1 hour)
- * - Gmail API search for subscription-related emails
- * - Vendor matching against a hardcoded map
- * - Currency conversion to INR
- *
- * TODO (v2): Replace static INR conversion rates with live exchange rate API
- * e.g. https://exchangerate-api.com/ free tier
+ * - Access token refresh
+ * - Scaled Gmail API search with pagination
+ * - Fuzzy vendor matching + heuristics
+ * - Deduplication across scans
+ * - Live currency conversion to INR
  */
+
+import { distance } from "fastest-levenshtein"
+import { db } from "@/lib/db"
+import { subscriptions } from "@/lib/db/schema"
+import { eq, and } from "drizzle-orm"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,6 +24,7 @@ export type DetectedSubscription = {
   originalAmount: number
   originalCurrency: string
   amountInr: number
+  isApproximateAmount?: boolean
   billingDate: string | null
   confidence: number // 0–1
 }
@@ -37,8 +41,7 @@ export type RefreshedTokens = {
 }
 
 // ---------------------------------------------------------------------------
-// Static INR conversion rates
-// TODO: replace with live exchange rate API (e.g. exchangerate-api.com free tier) in v2
+// Static INR conversion rates (Fallback)
 // ---------------------------------------------------------------------------
 const INR_RATES: Record<string, number> = {
   INR: 1,
@@ -51,13 +54,31 @@ const INR_RATES: Record<string, number> = {
   JPY: 0.56,
 }
 
-function convertToInr(amount: number, currency: string): number {
-  const rate = INR_RATES[currency.toUpperCase()] ?? 84 // default to USD rate if unknown
+type ExchangeRates = Record<string, number>
+
+async function fetchExchangeRates(): Promise<ExchangeRates | null> {
+  try {
+    const res = await fetch("https://open.er-api.com/v6/latest/USD")
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.rates ?? null
+  } catch (error) {
+    return null
+  }
+}
+
+function convertToInr(amount: number, currency: string, liveRates?: ExchangeRates | null): number {
+  const curr = currency.toUpperCase()
+  if (liveRates && liveRates["INR"] && liveRates[curr]) {
+    const amountInUsd = amount / liveRates[curr]
+    return Math.round(amountInUsd * liveRates["INR"] * 100) / 100
+  }
+  const rate = INR_RATES[curr] ?? 84 // default to USD rate if unknown
   return Math.round(amount * rate * 100) / 100
 }
 
 // ---------------------------------------------------------------------------
-// Vendor map — used to match email senders/subjects to known SaaS tools
+// Vendor map (Expanded)
 // ---------------------------------------------------------------------------
 const VENDOR_MAP: Record<string, { name: string; domains: string[] }> = {
   notion: { name: "Notion", domains: ["notion.so", "notion.com"] },
@@ -68,7 +89,8 @@ const VENDOR_MAP: Record<string, { name: string; domains: string[] }> = {
   loom: { name: "Loom", domains: ["loom.com"] },
   vercel: { name: "Vercel", domains: ["vercel.com"] },
   github: { name: "GitHub", domains: ["github.com", "github.githubassets.com"] },
-  openai: { name: "OpenAI / ChatGPT", domains: ["openai.com"] },
+  openai: { name: "OpenAI", domains: ["openai.com", "chatgpt.com"] },
+  claude: { name: "Claude / Anthropic", domains: ["anthropic.com", "claude.ai"] },
   canva: { name: "Canva", domains: ["canva.com"] },
   adobe: { name: "Adobe", domains: ["adobe.com"] },
   atlassian: { name: "Atlassian", domains: ["atlassian.com", "atlassian.net"] },
@@ -80,34 +102,99 @@ const VENDOR_MAP: Record<string, { name: string; domains: string[] }> = {
   intercom: { name: "Intercom", domains: ["intercom.com", "intercom.io"] },
   mixpanel: { name: "Mixpanel", domains: ["mixpanel.com"] },
   hotjar: { name: "Hotjar", domains: ["hotjar.com"] },
+  netflix: { name: "Netflix", domains: ["netflix.com"] },
+  spotify: { name: "Spotify", domains: ["spotify.com"] },
+  youtube: { name: "YouTube Premium", domains: ["youtube.com"] },
+  disney: { name: "Disney+", domains: ["disneyplus.com"] },
+  primevideo: { name: "Prime Video", domains: ["primevideo.com", "amazon.com"] },
+  midjourney: { name: "Midjourney", domains: ["midjourney.com"] },
+}
+
+function fuzzySimilarity(a: string, b: string): number {
+  const maxLen = Math.max(a.length, b.length)
+  if (maxLen === 0) return 1
+  return 1 - distance(a.toLowerCase(), b.toLowerCase()) / maxLen
 }
 
 function matchVendor(
   fromAddress: string,
   subject: string,
+  existingSubscriptions: Array<{ name: string }>,
 ): { key: string; name: string; confidence: number } | null {
   const fromLower = fromAddress.toLowerCase()
   const subjectLower = subject.toLowerCase()
 
+  // 1. Check exact matches in VENDOR_MAP
   for (const [key, vendor] of Object.entries(VENDOR_MAP)) {
     // High confidence: domain matches sender
-    const domainMatch = vendor.domains.some((d) => fromLower.includes(d))
+    const domainMatch = vendor.domains.some((d) => fromLower.includes(`@${d}`) || fromLower.includes(`.${d}`))
     if (domainMatch) {
       return { key, name: vendor.name, confidence: 0.95 }
     }
-
-    // Medium confidence: vendor name in subject
+    // Medium confidence: vendor name exactly in subject
     const nameInSubject = subjectLower.includes(key) || subjectLower.includes(vendor.name.toLowerCase())
     if (nameInSubject) {
       return { key, name: vendor.name, confidence: 0.7 }
     }
   }
 
-  return null
+  // Fallback: extract generic vendor name from sender display name or domain
+  const emailMatch = fromAddress.match(/<([^>]+)>/)
+  const emailPart = emailMatch ? emailMatch[1] : fromAddress
+
+  let vendorName = "Unknown Vendor"
+  let vendorKey = "unknown"
+
+  // Try to extract from the display name part
+  const nameMatch = fromAddress.match(/^"?(.*?)"?\s*</)
+  if (nameMatch && nameMatch[1].trim()) {
+    vendorName = nameMatch[1].trim()
+    vendorKey = vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")
+  } else {
+    // Try to extract from the domain
+    const domainMatch = emailPart.match(/@([^.]+)\./)
+    if (domainMatch && domainMatch[1]) {
+      const domain = domainMatch[1]
+      vendorName = domain.charAt(0).toUpperCase() + domain.slice(1)
+      vendorKey = domain.toLowerCase()
+    }
+  }
+
+  // Filter out common generic domains if we relied on them
+  const genericDomains = ["gmail", "yahoo", "hotmail", "outlook", "stripe", "paypal", "apple"]
+  if (!vendorKey || genericDomains.includes(vendorKey)) {
+     return null
+  }
+
+  // 2. Fuzzy match against existing subscriptions and known vendors to dedupe aliases
+  let bestMatch = { name: vendorName, key: vendorKey, confidence: 0.3 }
+  let maxSim = 0
+
+  // Fuzzy match against VENDOR_MAP
+  for (const [key, vendor] of Object.entries(VENDOR_MAP)) {
+    const sim = fuzzySimilarity(vendorName, vendor.name)
+    if (sim > maxSim && sim >= 0.75) {
+      maxSim = sim
+      bestMatch = { name: vendor.name, key: key, confidence: 0.7 }
+    }
+  }
+
+  // Fuzzy match against existing subscriptions
+  for (const sub of existingSubscriptions) {
+    const sim = fuzzySimilarity(vendorName, sub.name)
+    if (sim > maxSim && sim >= 0.75) {
+      maxSim = sim
+      // Use existing subscription name for consistency
+      const subKey = sub.name.toLowerCase().replace(/[^a-z0-9]/g, "")
+      bestMatch = { name: sub.name, key: subKey, confidence: 0.7 }
+    }
+  }
+
+  return bestMatch
 }
 
 // ---------------------------------------------------------------------------
-// Amount + currency extraction from email subject/snippet
+// Amount + currency extraction
 // ---------------------------------------------------------------------------
 const AMOUNT_REGEX = /(?:USD|EUR|GBP|AUD|CAD|SGD|INR|Rs\.?|₹|\$|€|£)\s*[\d,]+(?:\.\d{1,2})?|[\d,]+(?:\.\d{1,2})?\s*(?:USD|EUR|GBP|AUD|CAD|SGD|INR)/gi
 
@@ -129,11 +216,9 @@ function extractAmountAndCurrency(text: string): {
 
   const raw = matches[0].trim()
 
-  // Try to extract currency code
   const codeMatch = raw.match(/USD|EUR|GBP|AUD|CAD|SGD|INR/i)
   let currency = codeMatch ? codeMatch[0].toUpperCase() : "USD"
 
-  // Try symbol-to-currency
   for (const [symbol, code] of Object.entries(CURRENCY_SYMBOLS)) {
     if (raw.startsWith(symbol)) {
       currency = code
@@ -151,7 +236,6 @@ function extractAmountAndCurrency(text: string): {
 // ---------------------------------------------------------------------------
 // Token refresh logic
 // ---------------------------------------------------------------------------
-
 export async function refreshAccessTokenIfNeeded(tokens: GmailTokens): Promise<RefreshedTokens> {
   const FIVE_MINUTES_MS = 5 * 60 * 1000
   const isExpiringSoon = tokens.accessTokenExpiresAt - Date.now() < FIVE_MINUTES_MS
@@ -204,7 +288,6 @@ export async function refreshAccessTokenIfNeeded(tokens: GmailTokens): Promise<R
 // ---------------------------------------------------------------------------
 // Gmail scan
 // ---------------------------------------------------------------------------
-
 type GmailMessage = {
   id: string
   threadId: string
@@ -225,77 +308,123 @@ function getHeader(headers: Array<{ name: string; value: string }>, name: string
   return headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? ""
 }
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export async function scanGmailForSubscriptions(
   accessToken: string,
+  orgId?: string,
 ): Promise<DetectedSubscription[]> {
-  const query = encodeURIComponent(
-    "subject:(receipt OR invoice OR subscription OR \"payment confirmation\") newer_than:90d",
-  )
+  const liveRates = await fetchExchangeRates()
 
-  // 1. List matching message IDs (max 50)
-  const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  )
-
-  if (!listRes.ok) {
-    const body = await listRes.text()
-    throw new Error(`Gmail list failed: ${listRes.status} ${body}`)
+  // Fetch existing subscriptions for fuzzy matching
+  let existingSubs: Array<{ name: string }> = []
+  if (orgId) {
+    existingSubs = await db
+      .select({ name: subscriptions.name })
+      .from(subscriptions)
+      .where(eq(subscriptions.orgId, orgId))
   }
 
-  const listData = (await listRes.json()) as { messages?: GmailMessage[] }
-  const messages = listData.messages ?? []
+  // Pre-filter tightly: (receipt OR invoice ...) AND (from:billing OR from:receipts OR ...) AND within last year
+  const query = encodeURIComponent(
+    '(receipt OR invoice OR payment OR subscription OR renewal OR billing) (from:billing OR from:receipts OR from:noreply OR from:no-reply) newer_than:1y',
+  )
 
-  if (messages.length === 0) return []
+  const messages: GmailMessage[] = []
+  let pageToken: string | undefined = undefined
+  let totalFetched = 0
+  const MAX_CANDIDATES = 1000
 
-  // 2. Fetch each message detail (in batches of 10 to avoid rate limits)
-  const results: DetectedSubscription[] = []
-  const seen = new Set<string>()
-
-  for (const msg of messages.slice(0, 30)) {
-    const detailRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+  // 1. Paginate list requests to gather all matching candidates
+  do {
+    const pageTokenParam = pageToken ? `&pageToken=${pageToken}` : ""
+    const listRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100${pageTokenParam}`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     )
 
-    if (!detailRes.ok) continue
-
-    const detail = (await detailRes.json()) as GmailMessageDetail
-    const headers = detail.payload.headers
-    const from = getHeader(headers, "From")
-    const subject = getHeader(headers, "Subject")
-    const dateStr = getHeader(headers, "Date")
-
-    const vendor = matchVendor(from, subject)
-    if (!vendor) continue
-
-    // De-duplicate per vendor
-    if (seen.has(vendor.key)) continue
-    seen.add(vendor.key)
-
-    const extracted = extractAmountAndCurrency(`${subject} ${detail.snippet}`)
-    if (!extracted) continue
-
-    const amountInr = convertToInr(extracted.amount, extracted.currency)
-
-    // Try to parse the billing date
-    let billingDate: string | null = null
-    try {
-      billingDate = dateStr ? new Date(dateStr).toISOString().slice(0, 10) : null
-    } catch {
-      billingDate = null
+    if (!listRes.ok) {
+      const body = await listRes.text()
+      throw new Error(`Gmail list failed: ${listRes.status} ${body}`)
     }
 
-    results.push({
-      name: vendor.name,
-      vendorKey: vendor.key,
-      originalAmount: extracted.amount,
-      originalCurrency: extracted.currency,
-      amountInr,
-      billingDate,
-      confidence: vendor.confidence,
+    const listData = (await listRes.json()) as { messages?: GmailMessage[]; nextPageToken?: string }
+    
+    if (listData.messages) {
+      messages.push(...listData.messages)
+      totalFetched += listData.messages.length
+    }
+    
+    pageToken = listData.nextPageToken
+  } while (pageToken && totalFetched < MAX_CANDIDATES)
+
+  if (messages.length === 0) return []
+
+  // 2. Fetch message details in controlled batches
+  const dedupeMap = new Map<string, DetectedSubscription>()
+  
+  const BATCH_SIZE = 50
+  for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+    const batch = messages.slice(i, i + BATCH_SIZE)
+    
+    const fetchPromises = batch.map(async (msg) => {
+      const detailRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      )
+      if (!detailRes.ok) return null
+      return (await detailRes.json()) as GmailMessageDetail
     })
+
+    const batchResults = await Promise.all(fetchPromises)
+
+    for (const detail of batchResults) {
+      if (!detail) continue
+
+      const headers = detail.payload.headers
+      const from = getHeader(headers, "From")
+      const subject = getHeader(headers, "Subject")
+      const dateStr = getHeader(headers, "Date")
+
+      const vendor = matchVendor(from, subject, existingSubs)
+      if (!vendor) continue
+
+      const extracted = extractAmountAndCurrency(`${subject} ${detail.snippet}`)
+      if (!extracted) continue
+
+      const amountInr = convertToInr(extracted.amount, extracted.currency, liveRates)
+      const isApproximateAmount = extracted.currency.toUpperCase() !== "INR"
+
+      let billingDate: string | null = null
+      try {
+        billingDate = dateStr ? new Date(dateStr).toISOString().slice(0, 10) : null
+      } catch {
+        billingDate = null
+      }
+
+      const dedupeKey = `${vendor.key}-${extracted.amount}`
+      const existing = dedupeMap.get(dedupeKey)
+
+      // Deduplicate: Keep the most recent billing date
+      if (!existing || (billingDate && existing.billingDate && billingDate > existing.billingDate)) {
+        dedupeMap.set(dedupeKey, {
+          name: vendor.name,
+          vendorKey: vendor.key,
+          originalAmount: extracted.amount,
+          originalCurrency: extracted.currency,
+          amountInr,
+          isApproximateAmount,
+          billingDate,
+          confidence: vendor.confidence,
+        })
+      }
+    }
+
+    // Add small delay to respect Google's rate limits (max 250 quota units per second)
+    if (i + BATCH_SIZE < messages.length) {
+      await delay(500)
+    }
   }
 
-  return results.sort((a, b) => b.confidence - a.confidence)
+  return Array.from(dedupeMap.values()).sort((a, b) => b.confidence - a.confidence)
 }

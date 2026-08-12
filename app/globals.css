@@ -226,12 +226,6 @@
     text-transform: uppercase;
   }
 
-  .outline-text {
-    color: transparent;
-    -webkit-text-stroke: 1px rgba(251, 191, 36, 0.55);
-    text-stroke: 1px rgba(251, 191, 36, 0.55);
-  }
-
   .scrolling-marquee {
     overflow: hidden;
     background: rgb(9, 9, 11);
@@ -434,9 +428,8 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
 }
 
 .template-landing .outline-text {
-  -webkit-text-stroke: 1px var(--landing-fg);
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.9);
   color: transparent;
-  opacity: 0.15;
 }
 
 .template-landing .about-heading {
@@ -514,7 +507,7 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
   position: absolute;
   z-index: 20;
   pointer-events: none;
-  opacity: 0.08;
+  opacity: 0.25;
   transform-origin: center;
 }
 
@@ -531,66 +524,13 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
   font-size: 8rem;
 }
 
-.template-landing .composition {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 20px;
-  position: relative;
-  height: 1200px;
-}
-
-.template-landing .comp-item-1 {
-  grid-column: 1 / 7;
-  z-index: 2;
-  margin-top: 100px;
-}
-
-.template-landing .comp-item-2 {
-  grid-column: 5 / 13;
-  z-index: 1;
-}
-
-.template-landing .comp-item-3 {
-  grid-column: 2 / 6;
-  z-index: 3;
-  margin-top: 400px;
-}
-
-.template-landing .comp-item-4 {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 400px;
-  z-index: 10;
-}
-
-.template-landing .comp-image {
-  width: 100%;
-  height: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.template-landing .comp-text-wrap {
-  background: var(--landing-accent);
-  padding: 40px;
-  color: #ffffff;
-}
-
-.template-landing .comp-text-wrap h4 {
-  font-family: var(--landing-syne);
-  font-size: 2rem;
-}
-
-.template-landing .comp-text-wrap p {
-  margin-top: 20px;
-}
 
 .template-landing .sticky-type {
   position: sticky;
   top: 10%;
   font-size: 15rem;
   line-height: 0.7;
-  opacity: 0.05;
+  opacity: 0.4;
   z-index: 0;
   pointer-events: none;
 }
@@ -735,7 +675,7 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
 
   .template-landing .floating-label {
     font-size: 4rem !important;
-    opacity: 0.05;
+    opacity: 0.2;
     bottom: -20px;
     right: -30px;
     left: auto;
@@ -749,30 +689,6 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
     padding: 50px 0;
   }
 
-  .template-landing .composition {
-    display: flex;
-    flex-direction: column;
-    height: auto;
-    gap: 20px;
-  }
-
-  .template-landing .comp-item-1,
-  .template-landing .comp-item-2,
-  .template-landing .comp-item-3,
-  .template-landing .comp-item-4 {
-    width: 100%;
-    margin-top: 0 !important;
-    position: relative;
-    inset: auto;
-  }
-
-  .template-landing .comp-text-wrap {
-    padding: 30px;
-  }
-
-  .template-landing .comp-text-wrap h4 {
-    font-size: 1.5rem;
-  }
 
   .template-landing .footer-cta {
     font-size: 4rem;
@@ -791,22 +707,3 @@ html:has(.template-landing)::-webkit-scrollbar-thumb {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-
-  .template-landing .parallax-text,
-  .template-landing .floating-label,
-  .template-landing .hero-img,
-  .template-landing .blob,
-  .marquee-inner {
-    animation: none !important;
-    transform: none !important;
-  }
-}

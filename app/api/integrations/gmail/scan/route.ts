@@ -115,7 +115,7 @@ export async function POST() {
 
       let detected
       try {
-        detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+        detected = await scanGmailForSubscriptions(freshTokens.accessToken, session.user.orgId)
       } catch (scanError) {
         if (isGmailReconnectError(scanError)) {
           return NextResponse.json({ error: "GMAIL_AUTH_EXPIRED" }, { status: 401 })
@@ -225,7 +225,7 @@ export async function POST() {
 
     let detected
     try {
-      detected = await scanGmailForSubscriptions(freshTokens.accessToken)
+      detected = await scanGmailForSubscriptions(freshTokens.accessToken, session.user.orgId)
     } catch (scanError) {
       if (isGmailReconnectError(scanError)) {
         return NextResponse.json({ error: "GMAIL_AUTH_EXPIRED" }, { status: 401 })

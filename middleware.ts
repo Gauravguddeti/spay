@@ -4,9 +4,6 @@ import { Redis } from "@upstash/redis"
 
 import { neonAuth } from "@/lib/auth/server"
 
-// Rate limiting: Redis (via Upstash) is used when env vars are present.
-// inMemoryRateLimit is the fallback for local dev without Redis.
-// These two systems should never apply to the same route at the same time.
 // ---------------------------------------------------------------------------
 // Rate limiter — 10 requests per 60 seconds per IP
 // Requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in .env.local
@@ -47,20 +44,49 @@ function attachSecurityHeaders(response: NextResponse, cspHeader: string, nonce:
   return response
 }
 
+// Simple in-memory fallback for edge environments when Upstash Redis is not configured.
+// Note: State does not persist across isolates/redeployments, but provides basic protection.
+const fallbackIpCache = new Map<string, { count: number; timestamp: number }>()
+const FALLBACK_WINDOW_MS = 60 * 1000
+const FALLBACK_MAX_REQS = 10
+
 async function applyRateLimit(req: NextRequest): Promise<NextResponse | null> {
-  if (!ratelimit) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous"
+
+  if (ratelimit) {
+    const { success } = await ratelimit.limit(ip)
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests, please try again later" },
+        { status: 429 },
+      )
+    }
     return null
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous"
+  // --- Fallback logic ---
+  const now = Date.now()
+  const record = fallbackIpCache.get(ip)
 
-  const { success } = await ratelimit.limit(ip)
+  if (record && now - record.timestamp < FALLBACK_WINDOW_MS) {
+    if (record.count >= FALLBACK_MAX_REQS) {
+      return NextResponse.json(
+        { error: "Too many requests, please try again later" },
+        { status: 429 },
+      )
+    }
+    record.count += 1
+  } else {
+    fallbackIpCache.set(ip, { count: 1, timestamp: now })
+  }
 
-  if (!success) {
-    return NextResponse.json(
-      { error: "Too many requests, please try again later" },
-      { status: 429 },
-    )
+  // Optional: Clean up old entries periodically to prevent memory leaks in the isolate
+  if (Math.random() < 0.05) {
+    for (const [key, val] of fallbackIpCache.entries()) {
+      if (now - val.timestamp > FALLBACK_WINDOW_MS) {
+        fallbackIpCache.delete(key)
+      }
+    }
   }
 
   return null
@@ -95,9 +121,7 @@ export default async function middleware(req: NextRequest) {
     }
 
     const passthroughResponse = NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
+      request: { headers: requestHeaders },
     })
 
     const setCookie = authResponse.headers.get("set-cookie")
@@ -109,9 +133,7 @@ export default async function middleware(req: NextRequest) {
   }
 
   const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
+    request: { headers: requestHeaders },
   })
 
   return attachSecurityHeaders(response, cspHeader, nonce)
@@ -119,12 +141,12 @@ export default async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/api/auth/:path*',
-    '/api/subscriptions/:path*',
-    '/api/alerts/:path*',
-    '/api/integrations/:path*',
-    '/api/organizations/:path*',
-    '/api/settings/:path*',
+    "/dashboard/:path*",
+    "/api/auth/:path*",
+    "/api/subscriptions/:path*",
+    "/api/alerts/:path*",
+    "/api/integrations/:path*",
+    "/api/organizations/:path*",
+    "/api/settings/:path*",
   ],
 }

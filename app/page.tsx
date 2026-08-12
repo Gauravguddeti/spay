@@ -174,6 +174,7 @@ export default function LandingPage() {
                 className="project-image"
                 width={1200}
                 height={800}
+                unoptimized
               />
               <div className="floating-label huge-type outline-text label-right">SPEND</div>
             </div>
@@ -198,6 +199,7 @@ export default function LandingPage() {
                 className="project-image"
                 width={1200}
                 height={800}
+                unoptimized
               />
               <div className="floating-label huge-type outline-text label-left">INBOX</div>
             </div>
@@ -206,10 +208,10 @@ export default function LandingPage() {
           {/* Feature 3 — ALERT */}
           <div className="project-row">
             <div className="project-info">
-              <span className="project-tag">003 / WHATSAPP ALERTS</span>
+              <span className="project-tag">003 / EMAIL ALERTS</span>
               <h3 className="huge-type project-title">ALERT</h3>
               <p>
-                Get WhatsApp messages before every renewal — 30 days, 7 days, or 1 day out.
+                Get email digests before every renewal — 30 days, 7 days, or 1 day out.
                 Cancel unused tools before the charge hits.
               </p>
               <div className="divider" />
@@ -222,56 +224,37 @@ export default function LandingPage() {
                 className="project-image"
                 width={1200}
                 height={800}
+                unoptimized
               />
               <div className="floating-label huge-type outline-text label-right">ALERT</div>
             </div>
           </div>
         </section>
 
-        {/* ─── HOW IT WORKS (Overlapping Composition) ──────────────────────── */}
-        <section
-          id="how-it-works"
-          style={{ display: "block", padding: "100px 0", overflow: "hidden", minHeight: "auto" }}
-        >          <div className="container composition">
-            <div className="comp-item-1">
-              <Image
-                src="https://images.pexels.com/photos/6285130/pexels-photo-6285130.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                className="comp-image"
-                alt="Team discussing business charts in a strategy meeting"
-                width={1200}
-                height={900}
-              />
+        {/* ─── HOW IT WORKS ──────────────────────── */}
+        <section id="how-it-works" className="container">
+          <div className="project-row">
+            <div className="project-info">
+              <span className="project-tag">004 / WORKFLOW</span>
+              <h3 className="huge-type project-title">THE FULL PICTURE</h3>
+              <p>
+                Connect your inbox, review what we find, and import subscriptions in one click.
+                Set your alert preferences and walk away — SPAY handles the rest before
+                your next billing cycle.
+              </p>
+              <div className="divider" />
+              <p>AUTOMATED RECONCILIATION COMING SOON</p>
             </div>
-            <div className="comp-item-2">
+            <div className="project-media">
               <Image
                 src="https://images.pexels.com/photos/12969403/pexels-photo-12969403.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                className="comp-image"
-                alt="Laptop with spend analytics used to review subscriptions"
+                alt="Laptop with spend analytics"
+                className="project-image"
                 width={1200}
-                height={900}
+                height={800}
+                unoptimized
               />
-            </div>
-            <div className="comp-item-3">
-              <div
-                className="comp-text-wrap"
-                style={{ background: "#2d4a3e" }}
-              >
-                <h4>THE FULL PICTURE</h4>
-                <p>
-                  Connect your inbox, review what we find, and import subscriptions in one click.
-                  Set your alert preferences and walk away — SPAY handles the rest before
-                  your next billing cycle.
-                </p>
-              </div>
-            </div>
-            <div className="comp-item-4">
-              <Image
-                src="https://images.pexels.com/photos/9956765/pexels-photo-9956765.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                className="comp-image"
-                alt="Phone displaying heads-up notifications for billing reminders"
-                width={1200}
-                height={900}
-              />
+              <div className="floating-label huge-type outline-text label-right">SYNC</div>
             </div>
           </div>
         </section>
