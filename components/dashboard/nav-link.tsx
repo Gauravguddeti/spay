@@ -6,6 +6,7 @@ import {
   CreditCard,
   FileSearch,
   FileText,
+  GitMerge,
   LayoutDashboard,
   Settings,
 } from "lucide-react"
@@ -20,6 +21,7 @@ const iconMap = {
   calendar: CalendarClock,
   import: FileText,
   connect: FileSearch,
+  reconciliation: GitMerge,
   insights: BarChart3,
   settings: Settings,
 } as const

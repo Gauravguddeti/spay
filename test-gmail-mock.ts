@@ -21,7 +21,8 @@ const mockEmails = [
 ]
 
 // Expose the internal functions for testing by mocking the fetch API
-global.fetch = async (url: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+global.fetch = (async (url: string) => {
   if (url.includes('messages?q=')) {
     return {
       ok: true,

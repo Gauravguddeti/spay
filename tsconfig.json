@@ -39,6 +39,10 @@
   "exclude": [
     "node_modules",
     "landing-edits",
-    "_archive"
+    "_archive",
+    "test-gmail-mock.ts",
+    "test-gmail-scale.ts",
+    "test-rates.js",
+    "test-reconciliation.ts"
   ]
 }

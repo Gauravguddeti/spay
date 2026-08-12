@@ -159,3 +159,76 @@ export type AlertPreferences = {
   days7: boolean
   days1: boolean
 }
+
+// ---------------------------------------------------------------------------
+// Reconciliation — raw bank transactions (preserved before conversion)
+// ---------------------------------------------------------------------------
+export const bankTransactions = pgTable(
+  "bank_transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    // Original extracted string from PDF / Gmail / manual entry
+    vendorRaw: text("vendor_raw").notNull(),
+    // Normalized for matching (uppercased, noise stripped)
+    vendorNormalized: text("vendor_normalized").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    currency: text("currency").notNull().default("INR"),
+    date: date("date", { mode: "date" }),
+    // Full raw line / description from statement for audit trail
+    rawDescription: text("raw_description"),
+    // How this transaction was ingested
+    source: text("source").notNull().default("manual"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check(
+      "bank_transactions_source_check",
+      sql`${table.source} in ('pdf', 'gmail', 'manual')`,
+    ),
+  ],
+)
+
+// ---------------------------------------------------------------------------
+// Reconciliation — match results (audit trail, never deleted)
+// ---------------------------------------------------------------------------
+export const reconciliationMatches = pgTable(
+  "reconciliation_matches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bankTransactionId: uuid("bank_transaction_id")
+      .notNull()
+      .references(() => bankTransactions.id, { onDelete: "cascade" }),
+    // nullable — unmatched transactions have no subscription
+    subscriptionId: uuid("subscription_id").references(() => subscriptions.id, {
+      onDelete: "set null",
+    }),
+    // matched | needs_review | unmatched | resolved
+    status: text("status").notNull().default("unmatched"),
+    // 0–1 similarity score from matcher
+    confidenceScore: numeric("confidence_score", { precision: 5, scale: 4 }),
+    // Human-readable explanation for the audit trail
+    matchReason: text("match_reason"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    resolvedAt: timestamp("resolved_at", { mode: "date", withTimezone: true }),
+    // user id who resolved (from session)
+    resolvedBy: text("resolved_by"),
+  },
+  (table) => [
+    check(
+      "reconciliation_matches_status_check",
+      sql`${table.status} in ('matched', 'needs_review', 'unmatched', 'resolved')`,
+    ),
+  ],
+)
+
+export type BankTransaction = typeof bankTransactions.$inferSelect
+export type NewBankTransaction = typeof bankTransactions.$inferInsert
+export type ReconciliationMatch = typeof reconciliationMatches.$inferSelect
+export type NewReconciliationMatch = typeof reconciliationMatches.$inferInsert

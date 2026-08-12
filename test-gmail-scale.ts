@@ -85,6 +85,7 @@ for (let i = 0; i < remaining; i++) {
 // Shuffle array
 mockEmails.sort(() => Math.random() - 0.5)
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 global.fetch = async (url: string) => {
   // Exchange rate API
   if (url.includes('open.er-api.com')) {

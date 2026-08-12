@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 import { auth } from "@/auth"
+import { db } from "@/lib/db"
+import { bankTransactions } from "@/lib/db/schema"
+import { getOrganizationByOwnerId } from "@/lib/db/queries/users"
 import { parseBankStatement } from "@/lib/parsers/bankStatementParser"
+import { normalizeVendorName } from "@/lib/reconciliation/matcher"
 import { stripHtmlTags } from "@/lib/security/sanitize"
 
 export const runtime = "nodejs"
@@ -85,9 +89,34 @@ export async function POST(req: NextRequest) {
       date: item.date ? stripHtmlTags(item.date) : null,
     }))
 
+    // Persist raw transactions to bank_transactions for reconciliation (best-effort)
+    if (sanitizedDetected.length > 0) {
+      try {
+        const org = await getOrganizationByOwnerId(session.user.id)
+        if (org) {
+          await db.insert(bankTransactions).values(
+            sanitizedDetected.map((item) => ({
+              orgId: org.id,
+              vendorRaw: item.name,
+              vendorNormalized: normalizeVendorName(item.name),
+              amount: item.amountInr.toFixed(2),
+              currency: item.originalCurrency ?? "INR",
+              date: item.date ? new Date(item.date) : null,
+              rawDescription: item.name,
+              source: "pdf" as const,
+            })),
+          )
+        }
+      } catch (persistError) {
+        // Non-fatal — log but don't fail the response
+        console.error("[import/pdf] Failed to persist bank_transactions:", persistError)
+      }
+    }
+
     return NextResponse.json({ subscriptions: sanitizedDetected })
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }
+

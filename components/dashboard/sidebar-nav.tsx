@@ -7,6 +7,7 @@ const navItems = [
   { href: "/dashboard/calendar", label: "Renewal Calendar", icon: "calendar" },
   { href: "/dashboard/import", label: "Import PDF", icon: "import" },
   { href: "/dashboard/connect", label: "Connect Gmail", icon: "connect" },
+  { href: "/dashboard/reconciliation", label: "Reconciliation", icon: "reconciliation" },
   { href: "/dashboard/insights", label: "Insights", icon: "insights" },
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ] satisfies ReadonlyArray<{ href: string; label: string; icon: NavIconName }>
